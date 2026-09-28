@@ -1,0 +1,1905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>small things — final</title>
+<style>
+/* ===========================================================================
+   FINAL — the conversation from Version 2, with the field from Version 1
+   put back as a strip that gains resolution instead of a calendar that
+   deletes days. The rule stays hidden. The state does not.
+   =========================================================================== */
+
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;height:100%}
+body{
+  background:#0e0e11;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Helvetica Neue",
+              "PingFang SC","Hiragino Sans GB","Microsoft YaHei",Arial,sans-serif;
+  color:#111;
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+}
+body::before{
+  content:"";position:fixed;inset:0;
+  background:
+    radial-gradient(60% 45% at 50% 0%,rgba(120,120,160,.16),transparent 70%),
+    radial-gradient(50% 40% at 50% 100%,rgba(200,120,120,.10),transparent 70%);
+  pointer-events:none;
+}
+
+/* ---------- phone frame ---------------------------------------------- */
+.phone{
+  position:relative;
+  width:min(420px,100vw);
+  height:min(880px,100dvh);
+  background:#fff;
+  border-radius:44px;
+  overflow:hidden;
+  box-shadow:0 40px 120px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.08);
+  display:flex;flex-direction:column;
+  isolation:isolate;transform:translateZ(0);
+}
+@media (max-width:480px),(max-height:700px){
+  .phone{width:100vw;height:100dvh;border-radius:0}
+}
+
+.statusbar{
+  flex:none;height:46px;padding:0 26px 0 30px;
+  display:flex;align-items:flex-end;justify-content:space-between;
+  padding-bottom:6px;font-size:13px;font-weight:600;letter-spacing:.2px;
+  color:#111;background:#fff;z-index:5;
+}
+.statusbar .right{display:flex;gap:5px;align-items:center;opacity:.85}
+.sig{display:flex;gap:2px;align-items:flex-end;height:10px}
+.sig i{display:block;width:3px;background:#111;border-radius:1px}
+.sig i:nth-child(1){height:4px}.sig i:nth-child(2){height:6px}
+.sig i:nth-child(3){height:8px}.sig i:nth-child(4){height:10px}
+.batt{width:22px;height:11px;border:1.4px solid #111;border-radius:3px;position:relative;opacity:.9}
+.batt::after{content:"";position:absolute;inset:1.5px;right:5px;background:#111;border-radius:1px}
+
+/* ---------- screens ---------------------------------------------------- */
+.screen{
+  position:absolute;inset:46px 0 0 0;
+  display:flex;flex-direction:column;
+  background:#fff;
+  transform:translateX(100%);
+  transition:transform .34s cubic-bezier(.32,.72,0,1);
+  z-index:1;
+  contain:paint;                    /* keeps a tall screen from dropping frames */
+  backface-visibility:hidden;
+}
+.screen.active{transform:translateX(0)}
+.screen.behind{transform:translateX(-22%);filter:brightness(.94)}
+@media (prefers-reduced-motion:reduce){ .screen{transition:none} }
+
+/* ===========================================================================
+   ADDED — THE CALENDAR, AS THE FRONT DOOR
+   The first screen is an ordinary calendar app. It is the system in its
+   normal state: a grid of days, waiting to be filled. The Week 1 decision
+   tree's first question is no longer asked in words — it is the shape of
+   this screen. A memory with a date goes straight into a cell. A memory
+   without one cannot be entered here at all, and has to go somewhere else.
+   =========================================================================== */
+:root{
+  --paper:#fdfaf6;      /* warm ground */
+  --ink:#332c27;
+  --ink-soft:#7d726a;
+  --ink-faint:#b5aaa1;
+  --line:#ece4db;
+  --card:#fffdfb;
+  --accent:#e4573d;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Songti SC",serif;
+}
+#home{background:var(--paper);overflow-y:auto;padding:0 22px 34px;color:var(--ink)}
+
+/* --- hierarchy: mark, then title, then the one line that explains it --- */
+.home-top{padding:20px 0 2px}
+.brandmark{
+  display:flex;align-items:center;gap:7px;margin-bottom:22px;
+  font-size:10.5px;letter-spacing:.24em;text-transform:uppercase;
+  font-weight:600;color:var(--ink-faint);
+}
+.brandmark .dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.home-h{
+  font-family:var(--serif);
+  font-size:34px;line-height:1.12;margin:0 0 10px;
+  letter-spacing:-.4px;font-weight:600;color:var(--ink);
+}
+.home-sub{margin:0 0 26px;color:var(--ink-soft);font-size:14.5px;line-height:1.6;max-width:31ch}
+
+/* --- the calendar itself --- */
+.cal-card{
+  background:var(--card);border:1px solid var(--line);border-radius:20px;
+  padding:16px 14px 12px;
+  box-shadow:0 1px 2px rgba(80,55,35,.04),0 10px 26px rgba(80,55,35,.05);
+}
+.cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding:0 4px}
+.cal-title{
+  border:0;background:none;cursor:pointer;color:var(--ink);
+  font-family:var(--serif);font-size:18px;font-weight:600;letter-spacing:-.1px;
+  padding:3px 8px;border-radius:9px;display:flex;align-items:center;gap:6px;
+  transition:background .15s;
+}
+.cal-title:hover{background:#f6efe7}
+.cal-title .caret{font-size:9px;color:var(--ink-faint);transform:translateY(1px)}
+.cal-nav{display:flex;gap:2px}
+.cal-nav button{
+  border:0;background:none;font-size:18px;line-height:1;color:var(--ink-faint);
+  cursor:pointer;padding:4px 9px;border-radius:9px;transition:.15s;
+}
+.cal-nav button:hover{background:#f6efe7;color:var(--ink)}
+
+.cal-dow,.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.cal-dow span{
+  font-size:10px;letter-spacing:.1em;font-weight:600;
+  color:var(--ink-faint);text-align:center;padding-bottom:8px;
+}
+.cal-cell{
+  position:relative;aspect-ratio:1/1;border:0;background:none;cursor:pointer;
+  font:500 14px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--ink);
+  border-radius:12px;display:grid;place-items:center;transition:background .15s,color .15s;
+}
+.cal-cell:hover{background:#f6efe7}
+.cal-cell.blank{visibility:hidden;cursor:default}
+.cal-cell.sel{background:var(--ink);color:#fffdfb}
+.cal-cell.sel:hover{background:var(--ink)}
+
+/* today, circled by hand rather than boxed by a machine */
+.cal-cell .ring{
+  position:absolute;inset:8%;pointer-events:none;overflow:visible;
+  stroke:var(--accent);stroke-width:1.7;fill:none;
+  stroke-linecap:round;stroke-linejoin:round;opacity:.85;
+  transform:rotate(-4deg);
+}
+.cal-cell.sel .ring{stroke:#ffb9a8}
+@keyframes inked{from{stroke-dashoffset:150}to{stroke-dashoffset:0}}
+.cal-cell .ring path{stroke-dasharray:150;animation:inked 1.1s ease-out both}
+
+.cal-cell .pip{
+  position:absolute;bottom:7px;left:50%;transform:translateX(-50%);
+  width:4px;height:4px;border-radius:50%;background:var(--accent);
+}
+.cal-cell.sel .pip{background:#ffb9a8}
+.cal-cell.pip2 .pip{transform:translateX(calc(-50% - 3px));box-shadow:6px 0 0 var(--accent)}
+@keyframes justIn{
+  0%{transform:scale(1);background:transparent}
+  30%{transform:scale(1.14);background:#fbe6de}
+  100%{transform:scale(1);background:transparent}
+}
+.cal-cell.just{animation:justIn .75s cubic-bezier(.3,1.2,.4,1)}
+
+/* month + year picker */
+.picker{
+  margin:4px 4px 12px;padding:14px;border:1px solid var(--line);
+  border-radius:16px;background:#fdf8f2;animation:pop .2s cubic-bezier(.2,.9,.3,1.3);
+}
+.pick-lab{font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--ink-faint);font-weight:600;margin-bottom:9px}
+.pick-months{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:15px}
+.pick-months button{
+  border:0;background:#fffdfb;color:var(--ink-soft);cursor:pointer;
+  font-family:inherit;font-weight:600;font-size:11.5px;padding:8px 0;border-radius:9px;transition:.14s;
+}
+.pick-months button:hover{background:#f2e7dc;color:var(--ink)}
+.pick-months button.on{background:var(--ink);color:#fffdfb}
+.pick-years{display:flex;gap:5px;overflow-x:auto;padding-bottom:3px;scrollbar-width:thin}
+.pick-years button{
+  flex:none;border:0;background:#fffdfb;color:var(--ink-soft);cursor:pointer;
+  font:600 11.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;
+  padding:9px 11px;border-radius:9px;transition:.14s;
+}
+.pick-years button:hover{background:#f2e7dc;color:var(--ink)}
+.pick-years button.on{background:var(--ink);color:#fffdfb}
+
+/* the panel that opens on a day — a date that already exists needs no interview */
+.day-panel{
+  margin-top:14px;background:var(--card);border:1px solid var(--line);
+  border-radius:18px;padding:15px 16px 14px;
+  box-shadow:0 1px 2px rgba(80,55,35,.04),0 10px 26px rgba(80,55,35,.05);
+  animation:pop .25s cubic-bezier(.2,.9,.3,1.3);
+}
+.dp-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.day-panel .dp-date{
+  font-family:var(--serif);font-size:16px;font-weight:600;color:var(--ink);
+}
+.dp-close{
+  border:0;background:none;color:var(--ink-faint);font-size:20px;line-height:1;
+  cursor:pointer;padding:2px 6px;border-radius:8px;transition:.15s;
+}
+.dp-close:hover{background:#f6efe7;color:var(--ink)}
+.day-panel textarea{
+  width:100%;min-height:64px;resize:none;border:1px solid var(--line);outline:0;
+  background:#fdf8f2;border-radius:13px;padding:11px 13px;
+  font-family:inherit;font-weight:400;font-size:15px;line-height:1.5;color:var(--ink);transition:border-color .15s;
+}
+.day-panel textarea:focus{border-color:#ddd0c2}
+.day-panel textarea::placeholder{color:var(--ink-faint)}
+.dp-foot{display:flex;align-items:center;justify-content:space-between;margin-top:12px;gap:10px}
+.dp-foot .dp-hint{font-size:12px;color:var(--ink-faint);line-height:1.45}
+.dp-save{
+  border:0;background:var(--ink);color:#fffdfb;font-family:inherit;font-weight:600;font-size:13.5px;
+  padding:10px 20px;border-radius:999px;cursor:pointer;flex:none;transition:.15s;
+}
+.dp-save:hover:not(:disabled){background:#4a403a}
+.dp-save:disabled{background:#e6ddd4;color:#b5aaa1;cursor:default}
+.dp-existing{display:flex;flex-direction:column;gap:7px;margin-bottom:11px}
+.dp-existing div{
+  font-size:14px;line-height:1.5;color:var(--ink);background:#f7f0e8;
+  border-radius:11px;padding:10px 12px;
+}
+
+/* the other door */
+.undated{
+  margin-top:26px;border-top:1px solid var(--line);padding-top:22px;
+}
+.undated p{margin:0 0 13px;font-size:14.5px;line-height:1.55;color:var(--ink-soft)}
+.undated button{
+  border:1.5px solid var(--ink);background:none;color:var(--ink);
+  font-family:inherit;font-weight:600;font-size:14.5px;padding:13px 20px;border-radius:999px;cursor:pointer;
+  width:100%;transition:.16s;
+}
+.undated button:hover{background:var(--ink);color:var(--paper)}
+
+/* what the calendar has taken in, and what it could not */
+.hist{margin-top:30px}
+.hist-h{
+  font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;font-weight:700;
+  color:var(--ink-faint);margin-bottom:4px;
+}
+.hist-h.off{color:var(--accent)}
+.hist-note{font-size:12.5px;color:var(--ink-faint);line-height:1.5;margin-bottom:8px;font-style:italic}
+.hist-row{display:flex;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+.hist-row .hd{
+  flex:0 0 54px;font:600 10px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;
+  letter-spacing:.04em;color:var(--ink);text-transform:uppercase;padding-top:2px;
+}
+.hist-row .hd.none{color:#d8cec5}
+.hist-row .hb{flex:1;min-width:0}
+.hist-row .ht{font-size:14.5px;line-height:1.5;color:var(--ink);word-wrap:break-word}
+.hist-row .hk{
+  font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-faint);margin-top:5px;font-weight:600;
+}
+.hist-row .hx{
+  flex:none;border:0;background:none;color:#ded4ca;cursor:pointer;
+  font-size:16px;line-height:1;padding:0 2px;align-self:flex-start;
+}
+.hist-row .hx:hover{color:var(--accent)}
+.hist-empty{font-size:13.5px;color:var(--ink-faint);line-height:1.55;padding:6px 0 2px}
+
+/* ---------- compose ---------------------------------------------------- */
+/* the bridge screen keeps the calendar's warmth; the feed and the DM past it
+   are the platform, and stay cold on purpose */
+#compose{padding:0 22px;overflow-y:auto;background:var(--paper);color:var(--ink)}
+#compose h1{font-family:var(--serif);font-weight:600;letter-spacing:-.3px}
+#compose .sub{color:var(--ink-soft)}
+#compose .label{color:var(--ink-faint)}
+#compose .mood{border-color:var(--line);color:var(--ink-soft);background:var(--card)}
+#compose .mood:hover{border-color:#ddd0c2}
+#compose .mood.on{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+#compose textarea#story{background:var(--card);border:1px solid var(--line);color:var(--ink)}
+#compose .privacy{color:var(--ink-faint)}
+#compose .share{background:var(--ink)}
+#compose .share:hover{background:#4a403a}
+#compose .share:disabled{background:#e6ddd4;color:#b5aaa1}
+.compose-back{
+  border:0;background:none;font-size:26px;line-height:1;cursor:pointer;color:var(--ink);
+  padding:14px 4px 0 0;margin-bottom:-10px;align-self:flex-start;
+}
+.logo{
+  display:flex;align-items:center;gap:8px;
+  padding:14px 0 26px;font-size:13px;letter-spacing:.22em;
+  font-weight:600;color:#111;text-transform:uppercase;
+}
+.logo .dot{width:7px;height:7px;border-radius:50%;background:#ff4f3b}
+h1{font-size:30px;line-height:1.15;margin:0 0 10px;letter-spacing:-.8px;font-weight:700}
+.sub{margin:0 0 30px;color:#8b8b90;font-size:15px;line-height:1.5}
+.label{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#a0a0a6;margin-bottom:11px;font-weight:600}
+.moods{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:26px}
+.mood{
+  border:1px solid #e4e4e8;background:#fff;color:#4a4a52;
+  padding:9px 15px;border-radius:999px;font-size:14px;cursor:pointer;
+  transition:all .18s;font-family:inherit;
+}
+.mood:hover{border-color:#c9c9d1}
+.mood.on{background:#111;border-color:#111;color:#fff}
+textarea#story{
+  width:100%;min-height:140px;resize:none;border:0;outline:0;
+  font-family:inherit;font-weight:400;font-size:17px;line-height:1.55;color:#111;background:#f6f6f8;
+  border-radius:16px;padding:16px;
+}
+textarea#story::placeholder{color:#b4b4bc}
+.compose-foot{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:18px 0 28px;
+}
+.privacy{font-size:12.5px;color:#a0a0a6}
+.share{
+  border:0;background:#111;color:#fff;font-family:inherit;font-weight:600;font-size:15px;
+  padding:12px 26px;border-radius:999px;cursor:pointer;transition:.18s;
+}
+.share:hover{background:#333}
+.share:disabled{background:#d8d8dd;cursor:default}
+
+/* ---------- feed -------------------------------------------------------- */
+#feed{background:#fafafa}
+.feedbar{
+  flex:none;display:flex;align-items:center;justify-content:space-between;
+  padding:12px 20px;border-bottom:1px solid #ececf0;background:#fff;
+}
+.feedbar b{font-size:16px;letter-spacing:-.2px}
+.iconbtn{
+  border:0;background:transparent;cursor:pointer;position:relative;
+  font-size:19px;line-height:1;padding:4px;color:#111;
+}
+.badge{
+  position:absolute;top:-2px;right:-4px;min-width:16px;height:16px;padding:0 4px;
+  background:#ff3b30;color:#fff;font-size:10px;font-weight:700;
+  border-radius:9px;display:none;place-items:center;
+}
+.badge.on{display:grid}
+.feedscroll{flex:1;min-height:0;overflow-y:auto;padding:14px 14px 30px}
+.post{
+  background:#fff;border-radius:18px;padding:16px 17px;margin-bottom:11px;
+  border:1px solid #eeeef2;
+}
+.post.mine{border-color:#111}
+.post-head{display:flex;align-items:center;gap:9px;margin-bottom:11px}
+.av{width:30px;height:30px;border-radius:50%;flex:none;
+  background:linear-gradient(135deg,#d8d8e0,#b9b9c6)}
+.av.me{background:linear-gradient(135deg,#111,#4a4a55)}
+.who{font-size:13.5px;font-weight:600}
+.when{font-size:12px;color:#aeaeb6}
+.tag{
+  display:inline-block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  color:#ff4f3b;background:#fff1ef;padding:4px 9px;border-radius:6px;
+  margin-bottom:9px;font-weight:600;
+}
+.post p{margin:0;font-size:15.5px;line-height:1.55;color:#22222a;white-space:pre-wrap}
+.post-foot{display:flex;gap:16px;margin-top:13px;font-size:12.5px;color:#b0b0b8}
+.post-date{
+  margin-top:13px;padding-top:13px;border-top:1px solid #f0f0f4;
+  animation:pop .45s cubic-bezier(.2,.9,.3,1.3);
+}
+.post-date span{display:block;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;
+  color:#a0a0a6;font-weight:600;margin-bottom:5px}
+.post-date b{display:block;font-size:20px;font-weight:700;letter-spacing:-.4px;color:#111;line-height:1.2}
+.post-date.none b{font-size:17px;color:#8b8b90}
+.post-date i{display:block;font-style:normal;font-size:12px;color:#a0a0a6;margin-top:4px;line-height:1.45}
+
+/* ---------- DM thread --------------------------------------------------- */
+#dm{background:#fff}
+.dmbar{
+  flex:none;display:flex;align-items:center;gap:11px;
+  padding:9px 16px;border-bottom:1px solid #ececf0;background:#fff;z-index:3;
+}
+.back{border:0;background:none;font-size:24px;line-height:1;cursor:pointer;color:#111;padding:0 4px 3px 0}
+.dmav{width:34px;height:34px;border-radius:50%;flex:none;
+  background:linear-gradient(135deg,#c9c9d4,#9a9aa8);position:relative}
+.dmav::after{
+  content:"";position:absolute;right:-1px;bottom:-1px;width:10px;height:10px;
+  border-radius:50%;background:#30d158;border:2px solid #fff;
+}
+.dmav.gone::after{background:#c7c7cc}
+.dmname{font-size:15px;font-weight:600;letter-spacing:-.1px;user-select:none}
+.dmstat{font-size:11.5px;color:#a0a0a6;height:14px}
+
+/* ===========================================================================
+   THE FIELD — pinned under the header.
+   It is the only part of the machine that is allowed to be seen. It shows
+   WHAT is still possible; it never says WHY. Typeset in mono, so that the
+   interior of the system reads as a different material from its voice.
+   =========================================================================== */
+.strip{
+  flex:none;background:#fff;border-bottom:1px solid #f0f0f4;
+  padding:9px 16px 10px;
+  font:500 10px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  color:#111;letter-spacing:.14em;
+  transition:background .6s;
+  cursor:default;user-select:none;
+}
+.strip.moved{background:#f7f7fa}
+.rail{display:flex;justify-content:space-between;align-items:center}
+.rail span{
+  flex:1;text-align:center;opacity:.14;
+  transition:opacity .8s cubic-bezier(.4,0,.2,1),color .8s,transform .8s;
+}
+.rail span.on{opacity:.95}
+.rail span.only{opacity:1}
+.rail span.sep{flex:0 0 12px;opacity:.12}
+/* a cell that has just been ruled out is seen leaving, not simply absent */
+@keyframes strike{
+  0%{opacity:.95;transform:none}
+  35%{opacity:1;transform:translateY(-2px)}
+  100%{opacity:.14;transform:none}
+}
+.rail span.gone,.grid i.gone{animation:strike .9s cubic-bezier(.4,0,.2,1) both}
+
+/* how much of the field is left. no number, no label — just the width. */
+.bar{height:2px;margin-top:10px;background:#ececf0;border-radius:2px;overflow:hidden}
+.bar i{
+  display:block;height:100%;width:100%;background:#111;border-radius:2px;
+  transition:width 1.1s cubic-bezier(.4,0,.2,1);
+}
+.strip.dead .bar i{background:#c7c7cc}
+
+.rail.months{margin-top:9px;font-size:8.5px;letter-spacing:.06em;gap:1px}
+.rail.months span{flex:1 0 auto}
+
+.grids{display:flex;gap:18px;margin-top:10px;justify-content:flex-start}
+.gridbox{flex:0 0 154px;min-width:0}
+.gridbox .mlabel{
+  font-size:8.5px;letter-spacing:.16em;opacity:.45;margin-bottom:5px;text-align:left;
+}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.grid i{
+  font-style:normal;font-size:9px;line-height:15px;text-align:center;
+  border-radius:3px;opacity:.10;
+  transition:opacity .8s cubic-bezier(.4,0,.2,1),background .5s,color .5s;
+}
+.grid i.on{opacity:.9}
+.grid i.pin{opacity:1;background:#111;color:#fff}
+
+.final{
+  margin-top:10px;font-size:15px;letter-spacing:.12em;font-weight:600;
+  animation:pop .5s cubic-bezier(.2,.9,.3,1.3);
+}
+.strip[data-level="3"] .rail span:not(.on){opacity:.07}
+.strip.dead .grid i.on{opacity:.3}
+.strip.dead .final{opacity:.5}
+
+.thread{
+  flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;
+  padding:16px 14px 6px;
+  display:flex;flex-direction:column;gap:2px;
+  -webkit-overflow-scrolling:touch;
+}
+.thread::before{content:"";margin-top:auto}
+.daystamp{align-self:center;font-size:11.5px;color:#b0b0b8;margin:6px 0 14px}
+.warn{
+  align-self:center;max-width:82%;text-align:center;font-size:11.5px;color:#9a9aa2;
+  background:#f6f6f8;border-radius:10px;padding:9px 12px;margin:2px 0 14px;line-height:1.5;
+}
+.row{display:flex;max-width:100%;margin-top:2px}
+.row.them{justify-content:flex-start}
+.row.me{justify-content:flex-end;margin-top:8px}
+.row.gap{margin-top:11px}
+.bubble{
+  max-width:74%;padding:9px 14px;font-size:15.5px;line-height:1.42;
+  border-radius:20px;word-wrap:break-word;white-space:pre-wrap;
+  animation:pop .22s cubic-bezier(.2,.9,.3,1.3);
+}
+@keyframes pop{from{opacity:0;transform:translateY(7px) scale(.96)}to{opacity:1;transform:none}}
+.them .bubble{background:#f0f0f3;color:#111;border-bottom-left-radius:6px}
+.me .bubble{background:#111;color:#fff;border-bottom-right-radius:6px}
+.row.mid.them .bubble{border-bottom-left-radius:20px;border-top-left-radius:6px}
+.row.mid.me .bubble{border-bottom-right-radius:20px;border-top-right-radius:6px}
+.seen{align-self:flex-end;font-size:11px;color:#b4b4bc;margin:3px 4px 0}
+
+.typing .bubble{padding:13px 16px;display:flex;gap:4px}
+.typing span{width:7px;height:7px;border-radius:50%;background:#b6b6be;animation:blink 1.3s infinite}
+.typing span:nth-child(2){animation-delay:.18s}
+.typing span:nth-child(3){animation-delay:.36s}
+@keyframes blink{0%,60%,100%{opacity:.3;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
+
+.datecard{
+  align-self:flex-start;max-width:78%;margin:10px 0 4px;
+  background:#111;color:#fff;border-radius:20px;border-bottom-left-radius:6px;
+  padding:19px 22px;animation:pop .4s cubic-bezier(.2,.9,.3,1.3);
+}
+.datecard small{display:block;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;opacity:.5;margin-bottom:7px}
+.datecard b{display:block;font-size:24px;font-weight:600;letter-spacing:-.5px;line-height:1.15}
+.datecard i{display:block;font-style:normal;font-size:12.5px;opacity:.55;margin-top:6px}
+.datecard.nodate{background:#f0f0f3;color:#111;border:1px dashed #c8c8d0}
+.datecard.nodate small{opacity:.45}
+.datecard.nodate b{font-size:19px;letter-spacing:-.2px}
+.datecard.nodate i{opacity:.6}
+
+.composer{
+  flex:none;display:flex;align-items:flex-end;gap:8px;
+  padding:9px 12px calc(11px + env(safe-area-inset-bottom,0px));
+  border-top:1px solid #ececf0;background:#fff;
+}
+.composer textarea{
+  flex:1;min-height:38px;max-height:104px;resize:none;border:1px solid #e4e4e8;
+  border-radius:20px;padding:9px 14px;font-family:inherit;font-weight:400;font-size:15.5px;line-height:1.35;outline:0;
+  background:#fff;color:#111;
+}
+.composer textarea:focus{border-color:#c4c4cc}
+.composer textarea::placeholder{color:#b4b4bc}
+.send{
+  flex:none;width:36px;height:36px;border-radius:50%;border:0;background:#111;color:#fff;
+  font-size:17px;cursor:pointer;display:grid;place-items:center;transition:.15s;
+}
+.send:disabled{background:#dcdce2;cursor:default}
+.frozen{
+  flex:none;padding:16px 20px calc(20px + env(safe-area-inset-bottom,0px));
+  text-align:center;font-size:13px;color:#a0a0a6;border-top:1px solid #ececf0;line-height:1.5;
+}
+.frozen button{
+  margin:12px 0 0;border:1px solid #e0e0e6;background:#fff;
+  padding:9px 20px;border-radius:999px;font-family:inherit;font-weight:500;font-size:13.5px;cursor:pointer;color:#111;
+}
+
+/* ---------- push notification ------------------------------------------- */
+.push{
+  position:absolute;top:52px;left:12px;right:12px;z-index:40;
+  background:#fbfbfd;
+  border-radius:20px;padding:13px 15px;display:flex;gap:11px;align-items:center;
+  box-shadow:0 14px 40px rgba(0,0,0,.22);cursor:pointer;
+  transform:translateY(-160%);opacity:0;visibility:hidden;
+  transition:transform .5s cubic-bezier(.3,1.3,.4,1),opacity .28s,visibility 0s linear .5s;
+  border:1px solid #ececf0;
+}
+.push.show{
+  transform:translateY(0);opacity:1;visibility:visible;
+  transition:transform .5s cubic-bezier(.3,1.3,.4,1),opacity .28s,visibility 0s;
+}
+.push .pav{width:34px;height:34px;border-radius:50%;flex:none;
+  background:linear-gradient(135deg,#c9c9d4,#9a9aa8)}
+.push .ptxt{flex:1;min-width:0}
+.push .ptop{display:flex;justify-content:space-between;font-size:12px;color:#8b8b92;margin-bottom:2px}
+.push .ptop b{color:#111;font-size:13px;font-weight:600}
+.push p{margin:0;font-size:13.5px;line-height:1.35;color:#22222a;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+/* ---------- the rule, kept out of sight (triple-click the name) ---------- */
+.trace{
+  position:absolute;inset:0;z-index:60;background:rgba(10,10,14,.93);
+  backdrop-filter:blur(6px);color:#e8e8ee;padding:26px 22px;overflow-y:auto;
+  font:400 13px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;display:none;
+}
+.trace.on{display:block}
+.trace h3{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:#ff6b52;margin:0 0 4px}
+.trace p.note{color:#8b8b96;margin:0 0 18px;font-size:12px}
+.trace ol{padding-left:18px;margin:0}
+.trace li{margin-bottom:14px}
+.trace em{color:#8b8b96;font-style:normal;display:block}
+.trace b{color:#fff;font-weight:600}
+.trace .flag{color:#ffb27a}
+.trace .close{position:absolute;top:18px;right:20px;border:0;background:none;color:#8b8b96;font-size:22px;cursor:pointer}
+</style>
+</head>
+<body>
+
+<div class="phone">
+  <div class="statusbar">
+    <span id="clock">9:41</span>
+    <span class="right">
+      <span class="sig"><i></i><i></i><i></i><i></i></span>
+      <span style="font-size:11px">5G</span>
+      <span class="batt"></span>
+    </span>
+  </div>
+
+  <!-- ============ 0. THE CALENDAR (added) ============ -->
+  <section class="screen active" id="home">
+    <div class="home-top">
+      <div class="brandmark"><span class="dot"></span> small things</div>
+      <h1 class="home-h">Anything to add?</h1>
+      <p class="home-sub">Pick the day it happened and write it down.
+        Today is circled.</p>
+    </div>
+
+    <div class="cal-card">
+      <div class="cal-head">
+        <button class="cal-title" id="calTitle">— <span class="caret">▼</span></button>
+        <div class="cal-nav">
+          <button id="calPrev" aria-label="Previous month">‹</button>
+          <button id="calNext" aria-label="Next month">›</button>
+        </div>
+      </div>
+
+      <div class="picker" id="picker" hidden>
+        <div class="pick-lab">Month</div>
+        <div class="pick-months" id="pickMonths"></div>
+        <div class="pick-lab">Year</div>
+        <div class="pick-years" id="pickYears"></div>
+      </div>
+
+      <div class="cal-dow">
+        <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+    </div>
+
+    <div class="day-panel" id="dayPanel" hidden>
+      <div class="dp-head">
+        <div class="dp-date" id="dpDate">—</div>
+        <button class="dp-close" id="dpClose" aria-label="Close">×</button>
+      </div>
+      <div class="dp-existing" id="dpExisting"></div>
+      <textarea id="dpText" maxlength="300" placeholder="What happened that day?"></textarea>
+      <div class="dp-foot">
+        <span class="dp-hint">Goes straight in. No questions asked.</span>
+        <button class="dp-save" id="dpSave" disabled>Add</button>
+      </div>
+    </div>
+
+    <div class="undated">
+      <p>Remember something but not when it happened?</p>
+      <button id="toCompose">Find the day &rarr;</button>
+    </div>
+
+    <div class="hist" id="hist"></div>
+  </section>
+
+  <!-- ============ 1. COMPOSE ============ -->
+  <section class="screen" id="compose">
+    <button class="compose-back" id="composeBack" aria-label="Back">‹</button>
+    <div class="logo"><span class="dot"></span> small things</div>
+    <h1>You remember it.<br>Not when.</h1>
+    <p class="sub">Post a small thing you can&rsquo;t put a date on.<br>Someone here will help you find the day.</p>
+
+    <div class="label">How did it feel?</div>
+    <div class="moods" id="moods">
+      <button class="mood" data-m="annoyed">annoyed</button>
+      <button class="mood" data-m="happy">happy</button>
+      <button class="mood" data-m="sad">sad</button>
+      <button class="mood" data-m="embarrassed">embarrassed</button>
+      <button class="mood" data-m="relieved">relieved</button>
+      <button class="mood" data-m="confused">confused</button>
+    </div>
+
+    <div class="label">What happened?</div>
+    <textarea id="story" maxlength="600"
+      placeholder="We waited for the bus that never came. I know it was cold, but I couldn&rsquo;t tell you what month..."></textarea>
+
+    <div class="compose-foot">
+      <span class="privacy">Posted anonymously.</span>
+      <button class="share" id="shareBtn" disabled>Share</button>
+    </div>
+  </section>
+
+  <!-- ============ 2. FEED ============ -->
+  <section class="screen" id="feed">
+    <div class="feedbar">
+      <b><button class="back" id="feedBack" aria-label="Back to the calendar"
+                 style="font-size:22px;padding:0 6px 2px 0">‹</button>small things</b>
+      <button class="iconbtn" id="inboxBtn" aria-label="Inbox">✉︎<span class="badge" id="badge">1</span></button>
+    </div>
+    <div class="feedscroll" id="feedscroll"></div>
+  </section>
+
+  <!-- ============ 3. DM ============ -->
+  <section class="screen" id="dm">
+    <div class="dmbar">
+      <button class="back" id="backBtn" aria-label="Back">‹</button>
+      <div class="dmav" id="dmav"></div>
+      <div style="flex:1;min-width:0">
+        <div class="dmname" id="dmname">unknown</div>
+        <div class="dmstat" id="dmstat">Active now</div>
+      </div>
+    </div>
+
+    <!-- the field, pinned. wordless on purpose. -->
+    <div class="strip" id="strip" data-level="0">
+      <div class="rail years" id="railYears"></div>
+      <div class="rail months" id="railMonths" hidden></div>
+      <div class="grids" id="railDays" hidden></div>
+      <div class="final" id="railFinal" hidden></div>
+      <div class="bar"><i id="railBar"></i></div>
+    </div>
+
+    <div class="thread" id="thread"></div>
+
+    <form class="composer" id="composer">
+      <textarea id="msg" rows="1" placeholder="Message..." maxlength="500" autocomplete="off"></textarea>
+      <button class="send" id="sendBtn" type="submit" aria-label="Send">↑</button>
+    </form>
+
+    <div class="frozen" id="frozen" hidden>
+      This account is no longer available.
+      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+        <button id="seePost">see your post</button>
+        <button id="restart">back to the calendar</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="push" id="push">
+    <div class="pav"></div>
+    <div class="ptxt">
+      <div class="ptop"><b>unknown</b><span>now</span></div>
+      <p id="pushText"></p>
+    </div>
+  </div>
+
+  <div class="trace" id="trace">
+    <button class="close" id="traceClose">×</button>
+    <h3>What actually produced that date</h3>
+    <p class="note">Hidden from the participant. Triple-click the name again to close.</p>
+    <ol id="traceList"></ol>
+  </div>
+</div>
+
+<script src="engine.js"></script>
+<script>
+/* ===========================================================================
+   FINAL — the surface.
+   Version 2 kept its voice. Three things are new:
+
+   1. a message can carry several things at once, and a named day outranks
+      whatever was just asked;
+   2. not matching an option is not a failure — the system offers its own
+      reading and asks to be corrected;
+   3. the field of candidate days is visible above the thread and gains
+      resolution as the conversation goes: year → month → week → day.
+   =========================================================================== */
+
+const $ = id => document.getElementById(id);
+const wait = ms => new Promise(r => setTimeout(r, ms));
+const rnd  = (a,b) => a + Math.random()*(b-a);
+const pickRnd = a => a[Math.floor(Math.random()*a.length)];
+const PLAIN = /[?&]plain=1/.test(location.search);   /* for screen-recording */
+
+/* Focusing a field on a screen that is still sliding made the browser scroll
+   the phone frame sideways to "reveal" it — which dragged the next screen
+   into view and left the whole thing looking frozen mid-transition.
+   Every focus goes through here, and the frame is pinned back to zero. */
+function pinFrame(){
+  const ph = document.querySelector(".phone");
+  if(ph){ ph.scrollLeft = 0; ph.scrollTop = 0; }
+}
+function focusNoScroll(el){
+  if(!el) return;
+  try{ el.focus({preventScroll:true}); }catch(e){ el.focus(); }
+  pinFrame();
+}
+window.addEventListener("scroll", pinFrame, true);
+
+function tick(){
+  const d=new Date();let h=d.getHours();const m=String(d.getMinutes()).padStart(2,"0");
+  const ap=h>=12?"PM":"AM";h=h%12||12;$("clock").textContent=`${h}:${m}`;
+  return `${h}:${m} ${ap}`;
+}
+tick(); setInterval(tick,20000);
+
+/* ---------- state ------------------------------------------------------- */
+const S = {
+  mood:null, post:"", session:null,
+  started:false, fails:0, turn:0, hostile:0, nudges:0,
+  said:new Set(), queue:[], pumping:false, idleTimer:null,
+  busy:false, done:false, proposal:null, lastRemark:null
+};
+
+/* ---------- the stranger's voice ---------------------------------------- */
+const V = {
+  approach:[
+    "i saw your post",
+    "the part where you said you don't know when it was"
+  ],
+  offer:[
+    "i'm ok at working those out",
+    "if you want to try, i'll ask you a few things"
+  ],
+  ack:["ok","right","ok, good","that helps","that's useful actually","mm ok"],
+  ackUnknown:[
+    "that's fine",
+    "ok. we'll go around it",
+    "no, that's normal. nobody keeps that part"
+  ],
+  hedge:[
+    "i'm not guessing, i'm just removing things",
+    "most of this is ruling stuff out",
+    "you remember more than you think, it's just sideways"
+  ],
+  identity:[
+    "nobody. i just do this",
+    "not important. i'm better at this than at explaining it",
+    "someone who's read a lot of posts like yours"
+  ],
+  whyMe:[
+    "because you said you couldn't place it. that's the interesting part",
+    "people post the memory and lose the date. it's almost always recoverable"
+  ],
+  bot:["no","no. does it read like one","i type like this because it's late"],
+  proof:[
+    "i'm not proving anything. you're the one with the memory",
+    "i can't verify it. you can. that's the whole method"
+  ],
+  hostile:["ok. i'll stop","that's fair"],
+  nudge:["you still there","take your time","no rush"],
+  unread:[
+    "i can't tell from that",
+    "hm. i'm not getting that one",
+    "sorry, that one's past me"
+  ],
+  push:[
+    "i think i can work out when that was",
+    "you said you don't know when it was —",
+    "can i ask you a few things about that post"
+  ]
+};
+function line(pool){
+  const fresh = pool.filter(t => !S.said.has(t));
+  const t = fresh.length ? pickRnd(fresh) : pickRnd(pool);
+  S.said.add(t); return t;
+}
+
+/* how the stranger repeats back a clue it took without being asked.
+   the trace language ("cold — coat weather") stays in the trace. */
+const BACK = {
+  coat:{yes:"cold",no:"not cold"},
+  hot:{yes:"hot",no:"not hot"},
+  dark_early:{yes:"dark early",no:"still light"},
+  school:{session:"you were in classes",break:"a break"},
+  trees:{bare:"bare trees",turning:"leaves turning",blossom:"blossom",green:"all green"},
+  snow:{yes:"snow",no:"no snow"},
+  weekend:{weekend:"a weekend",weekday:"a weekday"},
+  how_long_ago:{this:"this year",one:"about a year ago",few:"a couple of years ago",long:"a while back"},
+  moment_or_period:{moment:"one day",period:"something that built up"},
+  representative:{yes:"one day stands for it",no:"no one day stands for it"}
+};
+function backWord(id,v,fallback){
+  return (BACK[id] && BACK[id][v]) || fallback || "";
+}
+/* "cold, not hot, bare trees" is three readings of one word. say it once. */
+function listBack(items){
+  let words = items.map(i => backWord(i.id, i.v, i.say)).filter(Boolean);
+  if(words.includes("cold")) words = words.filter(w=>w!=="not hot");
+  if(words.includes("hot")) words = words.filter(w=>w!=="not cold");
+  words = words.filter((w,i)=>words.indexOf(w)===i);
+  return words.join(", ");
+}
+
+/* ---------- rendering --------------------------------------------------- */
+const thread = $("thread");
+let lastSide = null;
+const nearBottom = () => thread.scrollHeight - thread.scrollTop - thread.clientHeight < 120;
+const toBottom = f => { if(f || nearBottom()) thread.scrollTop = thread.scrollHeight; };
+
+function addMsg(text, side){
+  const row = document.createElement("div");
+  row.className = "row " + side + (lastSide===side ? " mid" : " gap");
+  const b = document.createElement("div");
+  b.className = "bubble"; b.textContent = text;
+  row.appendChild(b);
+  const t = $("typingRow");
+  if(t) thread.insertBefore(row, t); else thread.appendChild(row);
+  lastSide = side; toBottom(side==="me");
+}
+function addSeen(){
+  document.querySelectorAll(".seen").forEach(e=>e.remove());
+  const s=document.createElement("div"); s.className="seen"; s.textContent="Seen";
+  thread.appendChild(s); toBottom(true);
+}
+function showTyping(){
+  if($("typingRow")) return;
+  const row=document.createElement("div"); row.id="typingRow"; row.className="row them typing gap";
+  const b=document.createElement("div"); b.className="bubble";
+  b.innerHTML="<span></span><span></span><span></span>";
+  row.appendChild(b); thread.appendChild(row); toBottom();
+}
+const hideTyping = () => $("typingRow")?.remove();
+const status = t => $("dmstat").textContent = t;
+const typeTime = t => PLAIN ? 380 : Math.min(2300, 400 + t.length*25 + rnd(0,300));
+
+function typo(text){
+  const words = text.split(" ");
+  const ok = words.map((w,i)=>[w,i]).filter(([w])=>/^[a-z]{5,}$/.test(w));
+  if(!ok.length) return null;
+  const [w,i] = pickRnd(ok);
+  const spots=[]; for(let p=1;p<w.length-1;p++) if(w[p]!==w[p+1]) spots.push(p);
+  if(!spots.length) return null;
+  const p = pickRnd(spots);
+  return { wrong: words.map((x,k)=>k===i?(w.slice(0,p)+w[p+1]+w[p]+w.slice(p+2)):x).join(" "),
+           fix: "*"+w };
+}
+
+async function say(text, opts={}){
+  await wait(opts.pre ?? rnd(300,650));
+  showTyping(); status("typing…");
+  /* hesitation: starts, stops, starts again. longer when it is unsure. */
+  const stall = opts.unsure ? 0.75 : 0.2;
+  if(!PLAIN && Math.random()<stall && text.length>20){
+    await wait(rnd(450,900)); hideTyping(); status("Active now");
+    await wait(rnd(700,1300)); showTyping(); status("typing…");
+  }
+  await wait(typeTime(text));
+  hideTyping(); status("Active now");
+  if(!PLAIN && Math.random()<0.04 && text.length>20 && !opts.noTypo && !S.typoRecent){
+    const t = typo(text);
+    if(t){
+      S.typoRecent = true;
+      setTimeout(()=>S.typoRecent=false, 45000);
+      addMsg(t.wrong,"them"); await wait(rnd(800,1400)); addMsg(t.fix,"them"); return;
+    }
+  }
+  addMsg(text,"them");
+}
+async function burst(lines, opts){
+  S.busy = true;
+  for(const l of lines){ if(l) await say(l, opts); }
+  S.busy = false; armIdle();
+}
+
+/* ===========================================================================
+   THE FIELD — drawn, never explained
+   year → month → week → day. It moves only when the candidate set moves.
+   =========================================================================== */
+const Strip = (function(){
+  const el=$("strip"), rY=$("railYears"), rM=$("railMonths"),
+        rD=$("railDays"), rF=$("railFinal");
+  const SH = DateSystem.SHORT.map(s=>s.toUpperCase());
+  let lastCount = null, pinned = null, widest = null;
+  const samePin = (y,m,d) => pinned && pinned.getFullYear()===y &&
+                             pinned.getMonth()===m && pinned.getDate()===d;
+
+  /* the row of years has to survive someone saying "18 years ago", so a long
+     span is shown compressed: the ends, the live years, and a mark where
+     years were skipped. */
+  function yearTokens(f){
+    if(f.allYears.length <= 9) return f.allYears;
+    const keep = new Set([f.allYears[0], f.allYears[f.allYears.length-1], ...f.years]);
+    const out=[]; let skipped=false;
+    f.allYears.forEach(y=>{
+      if(keep.has(y)){ if(skipped){ out.push(null); skipped=false; } out.push(y); }
+      else skipped = true;
+    });
+    if(skipped) out.push(null);
+    return out;
+  }
+
+  function years(f){
+    const was = new Set([...rY.querySelectorAll("span.on")].map(e=>e.textContent));
+    rY.innerHTML = "";
+    yearTokens(f).forEach(y=>{
+      const s=document.createElement("span");
+      if(y===null){ s.textContent="·"; s.className="sep"; rY.appendChild(s); return; }
+      s.textContent = y;
+      if(f.years.includes(y)) s.className = f.years.length===1 ? "on only" : "on";
+      else if(was.has(String(y))) s.className = "gone";
+      rY.appendChild(s);
+    });
+  }
+
+  function months(f){
+    const show = f.level >= 1;
+    rM.hidden = !show;
+    if(!show) return;
+    const was = new Set([...rM.querySelectorAll("span.on")].map(e=>e.textContent));
+    rM.innerHTML = "";
+    SH.forEach((m,i)=>{
+      const s=document.createElement("span");
+      s.textContent = m;
+      if(f.months.includes(i)) s.className = "on";
+      else if(was.has(m)) s.className = "gone";
+      rM.appendChild(s);
+    });
+  }
+
+  function grid(year, month, f){
+    const box=document.createElement("div"); box.className="gridbox";
+    const lab=document.createElement("div"); lab.className="mlabel";
+    lab.textContent = DateSystem.MONTHS[month].toUpperCase() + " " + year;
+    box.appendChild(lab);
+
+    const first=new Date(year,month,1).getDay();
+    const last=new Date(year,month+1,0).getDate();
+    const cells=[];
+    for(let i=0;i<first;i++) cells.push(null);
+    for(let d=1;d<=last;d++) cells.push(d);
+    while(cells.length%7) cells.push(null);
+
+    const alive = d => {
+      if(d===null) return false;
+      const dt=new Date(year,month,d), wknd=[0,6].includes(dt.getDay());
+      if(f.weekend===true && !wknd) return false;
+      if(f.weekend===false && wknd) return false;
+      if(f.exact) return f.exact.day===d && f.exact.month===month && f.exact.year===year;
+      return true;
+    };
+
+    const weeks=[];
+    for(let i=0;i<cells.length;i+=7) weeks.push(cells.slice(i,i+7));
+    /* once the field is thin, weeks with nothing left in them drop away */
+    const live = weeks.filter(w=>w.some(alive));
+    const use = (live.length && live.length<weeks.length) ? live : weeks;
+
+    const g=document.createElement("div"); g.className="grid";
+    use.forEach(w=>w.forEach(d=>{
+      const c=document.createElement("i");
+      c.textContent = d===null ? "" : d;
+      if(d!==null && (samePin(year,month,d) || (f.exact && alive(d)))) c.className = "on pin";
+      else if(alive(d)) c.className = "on";
+      g.appendChild(c);
+    }));
+    box.appendChild(g);
+    return box;
+  }
+
+  function days(f){
+    const show = f.level >= 2;
+    rD.hidden = !show;
+    if(!show) return;
+    rD.innerHTML = "";
+    /* once a day is committed to, the field shown is that day's month only —
+       never a second month from a year the answer did not come from. */
+    if(pinned){
+      rD.appendChild(grid(pinned.getFullYear(), pinned.getMonth(), f));
+      return;
+    }
+    f.months.slice(0,2).forEach(m => rD.appendChild(grid(f.years[0], m, f)));
+  }
+
+  function final(f){
+    const d = pinned || (f.level>=3 ? f.first : null);
+    rF.hidden = !d;
+    if(!d) return;
+    rF.textContent = SH[d.getMonth()] + " " + d.getDate();
+  }
+
+  /* the system committing to a day is also a move of the field */
+  function resolve(date){ pinned = date || null; sync(true); }
+
+  function sync(force){
+    if(!S.session) return;
+    const f = S.session.field();
+    if(!force && f.count === lastCount) return;      /* nothing actually moved */
+    if(widest === null || f.count > widest) widest = f.count;
+    lastCount = f.count;
+    el.dataset.level = pinned ? 3 : f.level;
+    if(pinned) f.level = Math.max(f.level, 2);
+    el.classList.toggle("dead", f.outcome === "C");
+    el.classList.add("moved");
+    setTimeout(()=>el.classList.remove("moved"), 1100);
+    years(f); months(f); days(f); final(f);
+    /* the hairline is the only thing that moves on EVERY narrowing, including
+       the early ones where the months row has not appeared yet. it is what
+       makes the field noticeable while the conversation is still going. */
+    $("railBar").style.width = Math.max(1.5, (f.count / widest) * 100) + "%";
+  }
+  return { sync, resolve };
+})();
+
+/* ---------- reading the narrowing out loud, without naming the rule ------ */
+let lastMonths=null, lastYears=null;
+function remark(){
+  const st = S.session.state;
+  const ms = st.months, yr = st.yearMin===st.yearMax ? st.yearMin : null;
+  const movedMonths = lastMonths!==null && ms.length < lastMonths;
+  const movedYears  = lastYears!==null && yr && lastYears!==yr;
+  lastMonths = ms.length; lastYears = yr;
+  if(!movedMonths && !movedYears) return null;
+  if(Math.random()>0.55) return null;
+  const has = set => ms.every(m=>set.includes(m));
+  const left = S.session.field().count;
+  let t = null;
+  /* say how close it is from the days actually left, not from the month
+     count — "a couple of weeks" was a lie whenever two months survived */
+  if(left<=4) t = "that's down to a few days now";
+  else if(left<=18) t = "ok. that's basically a couple of weeks either way";
+  else if(left<=45) t = "that's about a month of possibilities left";
+  else if(has([11,0,1,2])) t = "so we're somewhere in the cold part of it";
+  else if(has([5,6,7,8])) t = "so it's the summer";
+  else if(has([8,9,10])) t = "that puts it in the autumn";
+  else if(has([2,3,4])) t = "so, spring then";
+  else if(movedYears) t = `so it's ${yr}`;
+  else t = "ok, that moves it";
+  if(t === S.lastRemark) return null;
+  S.lastRemark = t;
+  return t;
+}
+
+/* ---------- asking the current question --------------------------------- */
+async function askCurrent(shortForm){
+  const q = S.session.current();
+  if(!q) return finish();
+  S.fails = 0;
+  let lines = q.chat.slice();
+  if(q.id==="how_long_ago" && S.session.state.needYear)
+    lines = [pickRnd(["which year was that, though","what year, do you think"])];
+  /* the stranger fumbles in its own speech, never in the question itself —
+     a misspelt question is just a question that is harder to answer */
+  await burst(shortForm ? [lines[lines.length-1]] : lines, {noTypo:true});
+  focusNoScroll($("msg"));
+}
+
+/* ---------- meta questions the person asks the stranger ------------------ */
+function metaIntent(raw){
+  const t = raw.toLowerCase().trim();
+  if(/\b(fuck|creepy|stalker|leave me alone|stop messaging|go away)\b|滚/.test(t)) return "hostile";
+  if(/\b(are you (a )?(bot|ai|real)|is this (a )?bot|chatgpt|robot)\b/.test(t)||/你是.*机器人/.test(t)) return "bot";
+  if(/\b(who are you|who is this|who r u|do i know you|what'?s your name)\b/.test(t)||/你是谁/.test(t)) return "who";
+  if(/\b(why (are|did) you|why me|how did you find|what do you want)\b/.test(t)||/为什么/.test(t)) return "why";
+  if(/\b(prove|proof|how (do|can) you know|i don'?t believe|how does this work|are you guessing)\b/.test(t)) return "proof";
+  return null;
+}
+
+/* ---------- turning one ingest report into speech ------------------------ */
+function speakApplied(rep){
+  const out = [];
+  for(const a of rep.applied){
+    if(a.kind==="context") continue;          /* said together, below */
+    if(a.kind==="date"){
+      const d = a.say.toLowerCase();
+      if(a.conflict){
+        out.push(d);
+        out.push(pickRnd([
+          "that doesn't sit with what you told me before. i'll take yours — you were there, i wasn't",
+          "that contradicts the earlier bit. i'm keeping the day. you'd know"]));
+      }else if(a.hedged){
+        out.push(d);
+        out.push(pickRnd([
+          "ok. you don't have to be sure. that's still the closest thing we've got",
+          "that'll do. a maybe is a lot more than nothing"]));
+      }else{
+        out.push(d);
+        out.push(pickRnd(["ok, that's a day","right, that's what i needed"]));
+      }
+    }
+    else if(a.kind==="clue"){
+      if(a.conflict || rep.contradiction){
+        /* the person named a month that collides with what the system had
+           worked out. it drops its own reasoning, out loud. */
+        out.push(a.say.toLowerCase());
+        out.push(pickRnd([
+          "that cuts against what i'd worked out from the weather. i'll drop mine",
+          "ok — that doesn't fit what i had, so what i had was wrong"]));
+      }else{
+        out.push(pickRnd([`${a.say.toLowerCase()}. ok`,
+                          `${a.say.toLowerCase()} — that narrows it a lot`]));
+      }
+    }
+    else if(a.kind==="anchor"){
+      out.push(pickRnd([
+        "wait — you have a photo of it",
+        "hold on, that's better than anything i was about to ask"
+      ].map(x => a.say==="photo" ? x : x.replace("a photo","that"))));
+    }
+    else if(a.kind==="structure"){
+      const w = backWord(a.id, a.v, a.say);
+      out.push(a.id==="representative"
+        ? pickRnd(["ok — so no one day stands for it","right. nothing in it points at a day"])
+        : pickRnd([`${w}, then`, `ok. ${w}`]));
+    }
+  }
+  /* several clues in one message are repeated back as one line, not four.
+     this is the moment people read as listening. */
+  const ctx = rep.applied.filter(a=>a.kind==="context");
+  if(ctx.length){
+    const listed = listBack(ctx);
+    if(listed) out.push(pickRnd([
+      `${listed}. i'll keep that`,
+      `${listed} — you hadn't been asked that yet, but i'm taking it`,
+      `ok — ${listed}`
+    ]));
+  }
+  return out;
+}
+
+/* ---------- the turn ---------------------------------------------------- */
+async function respond(raw){
+  S.turn++;
+
+  const meta = metaIntent(raw);
+  if(meta){
+    if(meta==="hostile"){
+      S.hostile++;
+      if(S.hostile>=2){ await burst([line(V.hostile)]); return finish(true); }
+      await burst([line(V.hostile), "one more question and i'll leave it"]);
+      return askCurrent(true);
+    }
+    const reply = { bot:V.bot, who:V.identity, why:V.whyMe, proof:V.proof }[meta];
+    await burst([line(reply), Math.random()<.5 ? line(V.hedge) : null].filter(Boolean));
+    return askCurrent(true);
+  }
+
+  /* --- a reading is on the table, waiting to be confirmed or corrected --- */
+  if(S.proposal){
+    const p = S.proposal;
+    const v = DateSystem.verdict(raw);
+    if(v==="yes"){
+      S.proposal = null;
+      S.session.confirmProposal(p);
+      Strip.sync();
+      await burst([pickRnd(["ok","right. that's what i thought","ok, noted"]),
+                   remark()].filter(Boolean));
+      return next();
+    }
+    if(v==="no"){
+      S.proposal = null;
+      const r = S.session.rejectProposal(p);
+      Strip.sync();
+      await burst([pickRnd(["ok. i had that wrong","sorry — i was reading into it",
+                            "no, fair. i was filling in"])]);
+      if(r.reAsk) return askCurrent(true);
+      return next();
+    }
+    /* they neither agreed nor refused — they said something real instead.
+       the guess is dropped, and the system owns it before moving on. */
+    S.proposal = null;
+    S.corrected = true;
+  }
+
+  /* --- everything the message is carrying, at once ---------------------- */
+  const rep = S.session.ingest(raw);
+  Strip.sync();
+
+  if(S.corrected){
+    S.corrected = false;
+    if(rep.answered || rep.applied.length)
+      await burst([pickRnd(["ah — the other way round, then","ok, i had it backwards",
+                            "right, i was wrong about that"])]);
+  }
+
+  if(rep.applied.length){
+    const lines = speakApplied(rep);
+    if(rep.certainty==="sure" && Math.random()<0.5) lines.push("you sound sure about that");
+    await burst(lines);
+    if(rep.answered || S.session.finished) return next();
+    return askCurrent(true);       /* they gave something else — re-ask, shorter */
+  }
+
+  if(rep.proposal){
+    S.proposal = rep.proposal;
+    await burst([pickRnd(["hm","wait —","ok, let me read that"])], {noTypo:true});
+    await burst([rep.proposal.ask], {unsure:true});
+    return;
+  }
+
+  /* it already has this. saying so is the difference between a system that
+     is listening and one that is only parsing. */
+  if(rep.stale){
+    await burst([pickRnd([
+      `you said ${rep.stale.value} before — i'm still going off that`,
+      `i have ${rep.stale.value} already. that part hasn't moved`
+    ])]);
+    return askCurrent(true);
+  }
+
+  if(rep.unread){
+    S.fails++;
+    if(S.fails>=2){
+      S.session.giveUp();
+      Strip.sync();
+      await burst([line(V.ackUnknown)]);
+      return next();
+    }
+    const q = S.session.current();
+    await burst([line(V.unread), q ? q.fallback : null].filter(Boolean));
+    return;
+  }
+
+  if(rep.answered){
+    const qKind = DateSystem.Q[rep.id] ? DateSystem.Q[rep.id].kind : "structural";
+    const bits = [];
+
+    /* the anchor: say what was heard in it before moving on */
+    if(rep.scene){
+      bits.push(pickRnd([rep.scene.say, rep.scene.say + ", isn't it"]));
+      if(rep.overrode) bits.push(pickRnd([
+        "that doesn't agree with what i'd worked out, and you were there",
+        "i had it somewhere else entirely. i'll go with yours"]));
+    }else if(rep.id==="anchor_what"){
+      bits.push(pickRnd([
+        "i can't get a month out of that on its own",
+        "that doesn't give me a month by itself"]));
+      bits.push(pickRnd(["but i'll hang onto it","i'm keeping it though"]));
+    }
+    if(rep.idk) bits.push(line(V.ackUnknown));
+    else if(rep.option && rep.option.v==="unknown") bits.push(line(V.ackUnknown));
+    /* a generic "ok" only when nothing more specific was already said */
+    else if(!bits.length && qKind==="narrow"){ if(Math.random()<0.65) bits.push(pickRnd(V.ack)); }
+    else if(!bits.length && Math.random()<0.4) bits.push(pickRnd(["ok","right","got it"]));
+    if(rep.contradiction && !rep.scene)
+      bits.push("wait — that doesn't sit with what you said before. i'll keep the earlier one");
+
+    /* a remark about the field may replace a generic "ok" — never a line
+       that reported what was actually heard */
+    const generic = bits.length===1 && /^(ok|right|got it|that helps|that's useful actually|mm ok|ok, good)$/.test(bits[0]);
+    const rm = rep.scene ? null : remark();   /* the scene already said it */
+    if(rm){ if(generic && Math.random()<0.6) bits.shift(); bits.push(rm); }
+    await burst(bits);
+    return next();
+  }
+
+  return next();
+}
+
+async function next(){
+  if(S.session.finished) return finish();
+  await wait(rnd(200,500));
+  return askCurrent();
+}
+
+function selectedFrom(res){
+  if(S.session.state.offered) return "the day you named, without being sure";
+  return res.remaining > 1
+    ? `one of ${res.remaining} days that still fit`
+    : "the only day left that fits";
+}
+
+/* ---------- the ending — whichever of the three it turns out to be ------- */
+async function finish(abrupt){
+  if(S.done) return;
+  S.done = true;
+  clearTimeout(S.idleTimer);
+  const res = S.session.result();
+  S.result = res;
+  S.busy = true;
+  Strip.resolve(res.date);          /* the field closes on the day it produced */
+
+  if(!abrupt){
+    await say(pickRnd(["hold on","ok, one sec","let me line it up"]), {pre:800, noTypo:true});
+    await wait(1200);
+    showTyping(); status("typing…");
+    await wait(1700);
+    hideTyping(); status("Active now");
+    await wait(600);
+  }
+
+  const card = document.createElement("div");
+
+  if(res.output === "A"){
+    await say("i think we have the exact day.", {pre:400, noTypo:true});
+    await wait(1000);
+    card.className = "datecard";
+    card.innerHTML = `<small>Exact Date</small><b>${res.pretty}</b><i>${res.weekday}</i>`;
+    thread.appendChild(card); lastSide=null; toBottom(true);
+    await wait(1400);
+    await say(pickRnd([
+      "that one was yours. you had it the whole time",
+      "i didn't find that. you did"
+    ]), {pre:300});
+
+  } else if(res.output === "B"){
+    await say("i don't think we can know for sure, but this is the day that fits best.",
+              {pre:400, noTypo:true});
+    await wait(1000);
+    card.className = "datecard";
+    card.innerHTML = `<small>Selected Date</small><b>${res.pretty}</b>` +
+                     `<i>${res.weekday} · ${selectedFrom(res)}</i>`;
+    thread.appendChild(card); lastSide=null; toBottom(true);
+    await wait(1400);
+    await say(pickRnd([
+      "it could be a couple of weeks either side of that",
+      "don't hold me to the day. the month is solid"
+    ]), {pre:300});
+
+  } else {
+    const st = S.session.state;
+    const isPeriod = st.reason==="period-no-moment";
+    await say(isPeriod
+      ? "i don't think this belongs to one specific day."
+      : "i can't get this down to a day.", {pre:400, noTypo:true});
+    await wait(1000);
+
+    /* before refusing, show that nothing was thrown away */
+    const keptWords = (res.kept||[]).map(k=>k.reading)
+      .filter(r=>r && !/unknown|cannot tell/.test(r));
+    if(!isPeriod && keptWords.length){
+      await say("what i have is " + keptWords.slice(0,4).join(", "), {pre:300});
+      await wait(700);
+    }
+
+    const yearKnown = st.yearMin === st.yearMax;
+    const rangeText = st.months.length < 12
+      ? "closest it gets: " + res.months + (yearKnown ? " " + res.years : "")
+      : (yearKnown ? "closest it gets: sometime in " + res.years : "");
+    card.className = "datecard nodate";
+    const why = isPeriod
+      ? "it stays a period — nothing in it points at a day"
+      : `${res.remaining} days still fit — no one of them speaks for the rest`;
+    S.closestText = rangeText;
+    card.innerHTML = `<small>Cannot Be Represented</small><b>No single day</b>` +
+      `<i>${why}${rangeText ? " · " + rangeText : ""}</i>`;
+    thread.appendChild(card); lastSide=null; toBottom(true);
+    await wait(1400);
+
+    if(isPeriod){
+      if(rangeText){
+        await say(`i can get it to around ${res.months.toLowerCase()}${yearKnown?" "+res.years:""}`, {pre:300});
+        await wait(900);
+      }
+      await say("but not to a day. it isn't shaped like one", {pre:300});
+    } else {
+      /* the honest refusal: this is the case the person kept hitting */
+      await say(pickRnd([
+        "i could hand you a day. it would be a number i made up and put in your life",
+        "i'd rather give you nothing than give you a day you'd start believing"
+      ]), {pre:300});
+      await wait(900);
+      if(S.session.state.anchorText)
+        await say(`if the ${S.session.state.anchorText.toLowerCase()} turns up, that's the thing that would do it`, {pre:300});
+      else if(rangeText)
+        await say(`around ${res.months.toLowerCase()}${yearKnown?" "+res.years:""} is as close as this gets`, {pre:300});
+    }
+  }
+
+  if(S.postEl){
+    const stamp = document.createElement("div");
+    stamp.className = "post-date" + (res.pretty ? "" : " none");
+    const OUTCOME = { A:"Exact Date", B:"Selected Date", C:"Cannot Be Represented" };
+    stamp.innerHTML = `<span>${OUTCOME[res.output]}</span>` + (res.pretty
+      ? `<b>${res.pretty}</b><i>${res.weekday}${
+          res.output==="B" ? " · " + selectedFrom(res) : ""}</i>`
+      : `<b>No single day</b>` + (S.closestText ? `<i>${S.closestText}</i>` : ""));
+    const foot = S.postEl.querySelector(".post-foot");
+    S.postEl.insertBefore(stamp, foot);
+    S.postEl.querySelector(".post-foot").firstElementChild.textContent = "1 reply";
+  }
+
+  /* ADDED: whatever it turned out to be, it is filed like anything else.
+     A day, a chosen day, or a record with no day to sit on. */
+  try{ Home.saveFromSession(res, S.post); }catch(e){}
+
+  await wait(1600);
+  $("composer").hidden = true;
+  $("frozen").hidden = false;
+  $("dmav").classList.add("gone");
+  status("Active 4h ago");
+  const w = document.createElement("div");
+  w.className = "warn"; w.textContent = "unknown deactivated their account.";
+  thread.appendChild(w); toBottom(true);
+  S.busy = false;
+}
+
+/* ---------- idle ------------------------------------------------------- */
+function armIdle(){
+  clearTimeout(S.idleTimer);
+  if(S.done || S.nudges>=2) return;
+  S.idleTimer = setTimeout(async ()=>{
+    /* don't nudge someone who is mid-sentence */
+    if(S.busy || S.done || $("msg").value.trim()) return armIdle();
+    S.nudges++; await burst([line(V.nudge)]);
+  }, rnd(45000,60000));
+}
+
+/* ===========================================================================
+   FLOW
+   =========================================================================== */
+const OTHERS = [
+  {m:"relieved", t:"Found out the noise in my apartment was the fridge. Couldn't tell you what week that was."},
+  {m:"embarrassed", t:"Waved at someone who was waving at the person behind me. Sometime last winter? Maybe."},
+  {m:"happy", t:"A stranger held the door with their foot because their hands were full of plants."},
+  {m:"confused", t:"I keep thinking it's Thursday. It has been Thursday for three days."}
+];
+
+$("moods").addEventListener("click", e=>{
+  const b=e.target.closest(".mood"); if(!b) return;
+  document.querySelectorAll(".mood").forEach(m=>m.classList.remove("on"));
+  b.classList.add("on"); S.mood=b.dataset.m; checkReady();
+});
+$("story").addEventListener("input", checkReady);
+function checkReady(){
+  $("shareBtn").disabled = !(S.mood && $("story").value.trim().length>=8);
+}
+/* ---------- screens: one deterministic state, never a half-finished one --
+   go() and back() used to set classes on two screens and trust that every
+   other screen was already where it should be. A click that landed during
+   a slide could leave two screens on stage at once. This recomputes all
+   four from a single index, so the same call twice is harmless. */
+const ORDER = ["home","compose","feed","dm"];
+function showScreen(id){
+  const i = ORDER.indexOf(id);
+  if(i < 0) return;
+  ORDER.forEach((s,n)=>{
+    const el = $(s);
+    el.classList.toggle("active", n === i);
+    el.classList.toggle("behind", n < i);
+  });
+  pinFrame();
+}
+function go(from,to){ showScreen(to); }
+function back(from,to){ showScreen(to); $("feedscroll").scrollTop = 0; }
+
+$("shareBtn").addEventListener("click", ()=>{
+  S.post = $("story").value.trim();
+  S.session = DateSystem.createSession(S.post);
+  Strip.sync(true);
+
+  const fs=$("feedscroll"); fs.innerHTML="";
+  S.postEl = postEl(S.mood,S.post,"you","just now",true);
+  fs.appendChild(S.postEl);
+  OTHERS.forEach((o,i)=>fs.appendChild(postEl(o.m,o.t,"anonymous",`${(i+1)*7}m`,false)));
+  go("compose","feed");
+
+  setTimeout(()=>{
+    $("pushText").textContent = pickRnd(V.push);
+    $("push").classList.add("show");
+    $("badge").classList.add("on");
+    setTimeout(()=>$("push").classList.remove("show"), 9000);
+  }, 4200);
+});
+
+function postEl(mood,text,who,when,mine){
+  const d=document.createElement("article");
+  d.className="post"+(mine?" mine":"");
+  d.innerHTML=`<div class="post-head"><div class="av${mine?" me":""}"></div>
+    <div><div class="who">${who}</div><div class="when">${when}</div></div></div>
+    <span class="tag">${mood}</span><p></p>
+    <div class="post-foot"><span>0 replies</span><span>${mine?"anonymous":"public"}</span></div>`;
+  d.querySelector("p").textContent=text;
+  return d;
+}
+
+async function openDM(){
+  $("push").classList.remove("show");
+  $("badge").classList.remove("on");
+  go("feed","dm");
+  if(thread.children.length===0){
+    const stamp=document.createElement("div");
+    stamp.className="daystamp"; stamp.textContent="Today "+tick();
+    thread.appendChild(stamp);
+    const warn=document.createElement("div");
+    warn.className="warn";
+    warn.textContent="You don't follow each other. This person may not be who they say they are.";
+    thread.appendChild(warn);
+
+    /* it read the post before it said anything. that is the first thing
+       the person sees the field move on. */
+    const got = S.session.applyPost();
+    Strip.sync();
+    const opener = [...V.approach, line(V.offer)];
+    if(got && got.length){
+      const listed = listBack(got).toLowerCase();
+      if(listed) opener.splice(2, 0, pickRnd([
+        `you already said ${listed}, so i'm starting from that`,
+        `i took ${listed} out of the post itself`
+      ]));
+    }
+    await burst(opener);
+  }
+  focusNoScroll($("msg"));
+}
+$("push").addEventListener("click", openDM);
+$("inboxBtn").addEventListener("click", ()=>{
+  if($("badge").classList.contains("on")||thread.children.length) openDM();
+});
+$("backBtn").addEventListener("click", ()=>back("dm","feed"));
+$("feedBack").addEventListener("click", ()=>{ showScreen("home"); Home.refresh(); });
+$("restart").addEventListener("click", ()=>location.reload());
+$("seePost").addEventListener("click", ()=>back("dm","feed"));
+
+/* ---------- composer ---------------------------------------------------- */
+const msg=$("msg");
+$("composer").addEventListener("submit", e=>{
+  e.preventDefault();
+  const text=msg.value.trim();
+  if(!text || S.done) return;
+  addMsg(text,"me");
+  msg.value=""; msg.style.height="auto"; focusNoScroll(msg);
+  setTimeout(addSeen, rnd(500,1100));
+  S.queue.push(text);
+  pump();
+});
+async function pump(){
+  if(S.pumping) return;
+  S.pumping = true;
+  while(S.queue.length && !S.done){
+    while(S.busy) await wait(160);
+    const batch = S.queue.splice(0, S.queue.length).join(" ");
+    if(!S.started){
+      /* the first message is a reply to the offer, not an answer to a
+         question — but if it already carries a day or a clue, take it. */
+      S.started = true;
+      const rep = S.session.ingest(batch, {answerCurrent:false});
+      Strip.sync();
+      if(rep.applied.length) await burst(speakApplied(rep));
+      else await burst([pickRnd(["ok","right, first one","let's see"])]);
+      if(S.session.finished) await finish();
+      else await askCurrent();
+    }
+    else await respond(batch);
+  }
+  S.pumping = false;
+}
+msg.addEventListener("input", ()=>{
+  msg.style.height="auto";
+  msg.style.height=Math.min(msg.scrollHeight,104)+"px";
+});
+msg.addEventListener("keydown", e=>{
+  if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); $("composer").requestSubmit(); }
+});
+document.addEventListener("keydown", e=>{
+  if(!$("dm").classList.contains("active") || S.done) return;
+  if(e.metaKey||e.ctrlKey||e.altKey) return;
+  if(document.activeElement===msg) return;
+  if(e.key.length===1 || e.key==="Backspace") focusNoScroll(msg);
+});
+
+/* ---------- the rule, for the class demo: triple-click "unknown" -------- */
+$("dmname").addEventListener("click", e=>{
+  if(e.detail!==3 || !S.session) return;
+  const tr = S.session.state.trace;
+  $("traceList").innerHTML = tr.map(t=>
+    `<li><b>${t.node}</b>
+       <em>asked as: &ldquo;${t.chat}&rdquo;</em>
+       <em>they said: &ldquo;${t.raw}&rdquo; &rarr; read as: ${t.reading}</em>
+       <em>&rarr; ${t.effect}</em>
+       ${t.volunteered?`<em class="flag">&rarr; volunteered, not asked for</em>`:""}
+       ${t.inferred?`<em class="flag">&rarr; inferred: ${t.inferred}</em>`:""}
+       ${t.contradiction?`<em class="flag">&rarr; contradiction</em>`:""}
+       <em>days still possible: ${t.remaining}</em></li>`).join("")
+    + (S.result ? `<li><b>output ${S.result.output}: ${S.result.pretty || "no date"}</b>
+       <em>${S.result.why}</em></li>` : `<li><em>still running</em></li>`);
+  $("trace").classList.add("on");
+});
+$("traceClose").addEventListener("click", ()=>$("trace").classList.remove("on"));
+
+/* ===========================================================================
+   ADDED — THE CALENDAR FRONT DOOR, AND WHAT IT KEEPS
+   ---------------------------------------------------------------------------
+   Nothing below changes the conversation or the mechanism. It adds the screen
+   the conversation is an exception to.
+
+   A memory that arrives with a date needs no interview: you tap the day and
+   write it in. That is one line of code and no questions. Everything the rest
+   of this prototype does — the stranger, the narrowing, the field — exists
+   only because some memories cannot do that.
+
+   The record keeps both, and keeps them apart: what the calendar could hold,
+   and what it could not.
+   =========================================================================== */
+const Store = (function(){
+  const KEY = "smallthings.v1";
+  let mem = null;                       /* file:// or private mode may refuse */
+  function load(){
+    if(mem) return mem;
+    try{
+      const raw = localStorage.getItem(KEY);
+      mem = raw ? JSON.parse(raw) : { v:1, entries:[] };
+    }catch(e){ mem = { v:1, entries:[] }; }
+    if(!Array.isArray(mem.entries)) mem.entries = [];
+    return mem;
+  }
+  function save(){
+    try{ localStorage.setItem(KEY, JSON.stringify(load())); }catch(e){}
+  }
+  return {
+    all: () => load().entries.slice(),
+    onDay(key){ return load().entries.filter(e => e.date === key); },
+    add(entry){
+      const e = Object.assign({ id: Date.now()+"-"+Math.random().toString(36).slice(2,7),
+                                created: Date.now() }, entry);
+      load().entries.push(e); save(); return e;
+    },
+    remove(id){
+      const d = load();
+      d.entries = d.entries.filter(e => e.id !== id);
+      mem = d; save();
+    }
+  };
+})();
+
+const Home = (function(){
+  const MONTHS = DateSystem.MONTHS;
+  const DAYS = DateSystem.WEEKDAYS;
+  const KIND = { exact:"Exact date", selected:"Selected date", none:"Cannot be represented" };
+  let view = new Date(), sel = null, flash = null;
+
+  const key = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+  const fromKey = k => { const [y,m,d] = k.split("-").map(Number); return new Date(y,m-1,d); };
+  const isToday = d => key(d) === key(new Date());
+
+  /* today is circled, not boxed — a pen mark that overshoots where it started */
+  const RING = "M32.5 9.5C27 5 15.5 5 10.5 11 5.5 17 6 28.5 12 34c6 5.5 18.5 4.5 23-1.5 "
+             + "4.5-6 3.5-17.5-4-24C28.5 6 25 5.5 22.5 6.2";
+  function ring(){
+    const svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
+    svg.setAttribute("viewBox","0 0 44 44");
+    svg.setAttribute("class","ring");
+    svg.setAttribute("aria-hidden","true");
+    const path = document.createElementNS("http://www.w3.org/2000/svg","path");
+    path.setAttribute("d", RING);
+    svg.appendChild(path);
+    return svg;
+  }
+
+  function drawCalendar(){
+    const y = view.getFullYear(), m = view.getMonth();
+    $("calTitle").innerHTML = `${MONTHS[m]} ${y} <span class="caret">▼</span>`;
+    const grid = $("calGrid");
+    grid.innerHTML = "";
+    const first = new Date(y,m,1).getDay();
+    const last  = new Date(y,m+1,0).getDate();
+    for(let i=0;i<first;i++){
+      const b=document.createElement("button");
+      b.className="cal-cell blank"; b.tabIndex=-1; grid.appendChild(b);
+    }
+    for(let d=1; d<=last; d++){
+      const date = new Date(y,m,d), k = key(date);
+      const b = document.createElement("button");
+      b.className = "cal-cell";
+      b.appendChild(document.createTextNode(d));
+      if(isToday(date)){ b.appendChild(ring()); b.title = "Today"; }
+      if(sel === k) b.classList.add("sel");
+      if(flash === k){
+        b.classList.add("just");
+        setTimeout(()=>{ flash = null; }, 800);
+      }
+      const n = Store.onDay(k).length;
+      if(n){
+        const p=document.createElement("span"); p.className="pip"; b.appendChild(p);
+        if(n>1) b.classList.add("pip2");
+      }
+      b.addEventListener("click", ()=>openDay(k));
+      grid.appendChild(b);
+    }
+  }
+
+  /* ---- month and year, picked from a list instead of stepped through ---- */
+  function drawPicker(){
+    const pm = $("pickMonths"), py = $("pickYears");
+    pm.innerHTML = ""; py.innerHTML = "";
+    DateSystem.SHORT.forEach((s,i)=>{
+      const b=document.createElement("button");
+      b.textContent = s.toUpperCase();
+      if(i===view.getMonth()) b.classList.add("on");
+      b.addEventListener("click", ()=>{
+        view = new Date(view.getFullYear(), i, 1);
+        closeDay(); drawCalendar(); drawPicker();
+      });
+      pm.appendChild(b);
+    });
+    const now = new Date().getFullYear();
+    let current = null;
+    for(let y = now+1; y >= now-40; y--){
+      const b=document.createElement("button");
+      b.textContent = y;
+      if(y===view.getFullYear()){ b.classList.add("on"); current = b; }
+      b.addEventListener("click", ()=>{
+        view = new Date(y, view.getMonth(), 1);
+        closeDay(); drawCalendar(); drawPicker();
+      });
+      py.appendChild(b);
+    }
+    if(current) current.scrollIntoView({block:"nearest", inline:"center"});
+  }
+  function togglePicker(){
+    const p = $("picker");
+    p.hidden = !p.hidden;
+    if(!p.hidden) drawPicker();
+  }
+
+  function openDay(k){
+    sel = (sel === k) ? null : k;      /* tapping the open day closes it */
+    showDay();
+  }
+
+  function showDay(){
+    drawCalendar();
+    const panel = $("dayPanel");
+    if(!sel){ panel.hidden = true; return; }
+    const d = fromKey(sel);
+    panel.hidden = false;
+    $("dpDate").textContent = `${DAYS[d.getDay()]}, ${MONTHS[d.getMonth()]} ${d.getDate()}`;
+    const ex = $("dpExisting");
+    ex.innerHTML = "";
+    Store.onDay(sel).forEach(e=>{
+      const row=document.createElement("div");
+      row.textContent = e.text;
+      ex.appendChild(row);
+    });
+    $("dpText").value = "";
+    $("dpSave").disabled = true;
+    /* preventScroll keeps the page from jumping the title off the top */
+    focusNoScroll($("dpText"));
+  }
+
+  function closeDay(){ sel = null; $("dayPanel").hidden = true; drawCalendar(); }
+
+  function addToDay(){
+    const t = $("dpText").value.trim();
+    if(!t || !sel) return;
+    Store.add({ text:t, date:sel, kind:"exact", via:"calendar" });
+    /* written down → back to the calendar, with the day it landed on
+       lighting up for a moment so you can see where it went */
+    flash = sel;
+    closeDay();
+    render();
+  }
+
+  /* the conversation's outcome, filed the same way anything else is */
+  function saveFromSession(res, postText){
+    const text = (postText || "").trim();
+    if(!text) return;
+    const kind = res.output==="A" ? "exact" : res.output==="B" ? "selected" : "none";
+    let note = "";
+    if(res.date) note = res.weekday + (res.output==="B" ? ` · one of ${res.remaining} days that fit` : "");
+    else note = res.months && res.months!=="any month"
+      ? `closest it gets: ${res.months} ${res.years}` : "no day could be settled on";
+    Store.add({
+      text, kind, via:"stranger", note,
+      date: res.date ? key(res.date) : null
+    });
+    if(res.date){ view = new Date(res.date.getFullYear(), res.date.getMonth(), 1); }
+    drawCalendar(); render();
+  }
+
+  function row(e){
+    const wrap=document.createElement("div"); wrap.className="hist-row";
+    const hd=document.createElement("div");
+    hd.className="hd" + (e.date ? "" : " none");
+    if(e.date){
+      const d=fromKey(e.date);
+      hd.innerHTML = `${DateSystem.SHORT[d.getMonth()].toUpperCase()} ${d.getDate()}<br>${d.getFullYear()}`;
+    } else hd.textContent = "—";
+    const hb=document.createElement("div"); hb.className="hb";
+    const ht=document.createElement("div"); ht.className="ht"; ht.textContent=e.text;
+    const hk=document.createElement("div"); hk.className="hk";
+    hk.textContent = KIND[e.kind] + (e.via==="stranger" ? " · via the stranger" : "")
+                   + (e.note ? " · " + e.note : "");
+    hb.appendChild(ht); hb.appendChild(hk);
+    if(e.date){
+      hb.style.cursor = "pointer";
+      hb.title = "Show it on the calendar";
+      hb.addEventListener("click", ()=>{
+        const d = fromKey(e.date);
+        view = new Date(d.getFullYear(), d.getMonth(), 1);
+        sel = e.date; showDay();
+        $("dayPanel").scrollIntoView({behavior:"smooth", block:"center"});
+      });
+    }
+    const hx=document.createElement("button"); hx.className="hx"; hx.textContent="×";
+    hx.title = "Remove";
+    hx.addEventListener("click", ()=>{ Store.remove(e.id); showDay(); render(); });
+    wrap.appendChild(hd); wrap.appendChild(hb); wrap.appendChild(hx);
+    return wrap;
+  }
+
+  function render(){
+    const box = $("hist");
+    box.innerHTML = "";
+    const all = Store.all().sort((a,b)=>b.created-a.created);
+    const placed = all.filter(e=>e.date);
+    const un = all.filter(e=>!e.date);
+
+    const h1=document.createElement("div"); h1.className="hist-h";
+    h1.textContent = "On the calendar";
+    box.appendChild(h1);
+    if(placed.length) placed.forEach(e=>box.appendChild(row(e)));
+    else {
+      const p=document.createElement("div"); p.className="hist-empty";
+      p.textContent = "Nothing yet. Pick a day above.";
+      box.appendChild(p);
+    }
+
+    if(un.length){
+      const h2=document.createElement("div");
+      h2.className="hist-h off"; h2.style.marginTop="24px";
+      h2.textContent = "Not on the calendar";
+      box.appendChild(h2);
+      const note=document.createElement("div");
+      note.className="hist-empty";
+      note.textContent = "These happened. They have no day to sit on.";
+      box.appendChild(note);
+      un.forEach(e=>box.appendChild(row(e)));
+    }
+  }
+
+  function init(){
+    drawCalendar(); render();
+    $("calTitle").addEventListener("click", togglePicker);
+    $("calPrev").addEventListener("click", ()=>{
+      view = new Date(view.getFullYear(), view.getMonth()-1, 1);
+      closeDay(); if(!$("picker").hidden) drawPicker();
+    });
+    $("calNext").addEventListener("click", ()=>{
+      view = new Date(view.getFullYear(), view.getMonth()+1, 1);
+      closeDay(); if(!$("picker").hidden) drawPicker();
+    });
+    $("dpClose").addEventListener("click", closeDay);
+    $("dpText").addEventListener("input", ()=>{
+      $("dpSave").disabled = !$("dpText").value.trim();
+    });
+    $("dpText").addEventListener("keydown", e=>{
+      if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); addToDay(); }
+    });
+    $("dpSave").addEventListener("click", addToDay);
+    $("toCompose").addEventListener("click", ()=>{ go("home","compose"); focusNoScroll($("story")); });
+    $("composeBack").addEventListener("click", ()=>back("compose","home"));
+  }
+
+  return { init, saveFromSession, refresh(){ drawCalendar(); render(); } };
+})();
+Home.init();
+</script>
+</body>
+</html>
