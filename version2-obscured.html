@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>small things</title>
+<style>
+/* ===========================================================================
+   VERSION 2 — OBSCURED
+   The mechanism (engine.js) is never shown. The interface performs a person.
+   =========================================================================== */
+
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;height:100%}
+body{
+  background:#0e0e11;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Helvetica Neue",
+              "PingFang SC","Hiragino Sans GB","Microsoft YaHei",Arial,sans-serif;
+  color:#111;
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+}
+body::before{
+  content:"";position:fixed;inset:0;
+  background:
+    radial-gradient(60% 45% at 50% 0%,rgba(120,120,160,.16),transparent 70%),
+    radial-gradient(50% 40% at 50% 100%,rgba(200,120,120,.10),transparent 70%);
+  pointer-events:none;
+}
+
+/* ---------- phone frame ---------------------------------------------- */
+.phone{
+  position:relative;
+  width:min(420px,100vw);
+  height:min(880px,100dvh);
+  background:#fff;
+  border-radius:44px;
+  overflow:hidden;
+  box-shadow:0 40px 120px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.08);
+  display:flex;flex-direction:column;
+  isolation:isolate;transform:translateZ(0);
+}
+@media (max-width:480px),(max-height:700px){
+  .phone{width:100vw;height:100dvh;border-radius:0}
+}
+
+.statusbar{
+  flex:none;height:46px;padding:0 26px 0 30px;
+  display:flex;align-items:flex-end;justify-content:space-between;
+  padding-bottom:6px;font-size:13px;font-weight:600;letter-spacing:.2px;
+  color:#111;background:#fff;z-index:5;
+}
+.statusbar .right{display:flex;gap:5px;align-items:center;opacity:.85}
+.sig{display:flex;gap:2px;align-items:flex-end;height:10px}
+.sig i{display:block;width:3px;background:#111;border-radius:1px}
+.sig i:nth-child(1){height:4px}.sig i:nth-child(2){height:6px}
+.sig i:nth-child(3){height:8px}.sig i:nth-child(4){height:10px}
+.batt{width:22px;height:11px;border:1.4px solid #111;border-radius:3px;position:relative;opacity:.9}
+.batt::after{content:"";position:absolute;inset:1.5px;right:5px;background:#111;border-radius:1px}
+
+/* ---------- screens ---------------------------------------------------- */
+.screen{
+  position:absolute;inset:46px 0 0 0;
+  display:flex;flex-direction:column;
+  background:#fff;
+  transform:translateX(100%);
+  transition:transform .42s cubic-bezier(.32,.72,0,1);
+  z-index:1;
+}
+.screen.active{transform:translateX(0)}
+.screen.behind{transform:translateX(-22%);filter:brightness(.92)}
+
+/* ---------- compose ---------------------------------------------------- */
+#compose{padding:0 22px;overflow-y:auto}
+.logo{
+  display:flex;align-items:center;gap:8px;
+  padding:14px 0 26px;font-size:13px;letter-spacing:.22em;
+  font-weight:600;color:#111;text-transform:uppercase;
+}
+.logo .dot{width:7px;height:7px;border-radius:50%;background:#ff4f3b}
+h1{font-size:30px;line-height:1.15;margin:0 0 10px;letter-spacing:-.8px;font-weight:700}
+.sub{margin:0 0 30px;color:#8b8b90;font-size:15px;line-height:1.5}
+.label{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#a0a0a6;margin-bottom:11px;font-weight:600}
+.moods{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:26px}
+.mood{
+  border:1px solid #e4e4e8;background:#fff;color:#4a4a52;
+  padding:9px 15px;border-radius:999px;font-size:14px;cursor:pointer;
+  transition:all .18s;font-family:inherit;
+}
+.mood:hover{border-color:#c9c9d1}
+.mood.on{background:#111;border-color:#111;color:#fff}
+textarea#story{
+  width:100%;min-height:140px;resize:none;border:0;outline:0;
+  font:400 17px/1.55 inherit;color:#111;background:#f6f6f8;
+  border-radius:16px;padding:16px;
+}
+textarea#story::placeholder{color:#b4b4bc}
+.compose-foot{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:18px 0 28px;
+}
+.privacy{font-size:12.5px;color:#a0a0a6}
+.share{
+  border:0;background:#111;color:#fff;font:600 15px inherit;
+  padding:12px 26px;border-radius:999px;cursor:pointer;transition:.18s;
+}
+.share:hover{background:#333}
+.share:disabled{background:#d8d8dd;cursor:default}
+
+/* ---------- feed -------------------------------------------------------- */
+#feed{background:#fafafa}
+.feedbar{
+  flex:none;display:flex;align-items:center;justify-content:space-between;
+  padding:12px 20px;border-bottom:1px solid #ececf0;background:#fff;
+}
+.feedbar b{font-size:16px;letter-spacing:-.2px}
+.iconbtn{
+  border:0;background:transparent;cursor:pointer;position:relative;
+  font-size:19px;line-height:1;padding:4px;color:#111;
+}
+.badge{
+  position:absolute;top:-2px;right:-4px;min-width:16px;height:16px;padding:0 4px;
+  background:#ff3b30;color:#fff;font-size:10px;font-weight:700;
+  border-radius:9px;display:none;place-items:center;
+}
+.badge.on{display:grid}
+.feedscroll{flex:1;min-height:0;overflow-y:auto;padding:14px 14px 30px}
+.post{
+  background:#fff;border-radius:18px;padding:16px 17px;margin-bottom:11px;
+  border:1px solid #eeeef2;
+}
+.post.mine{border-color:#111}
+.post-head{display:flex;align-items:center;gap:9px;margin-bottom:11px}
+.av{width:30px;height:30px;border-radius:50%;flex:none;
+  background:linear-gradient(135deg,#d8d8e0,#b9b9c6)}
+.av.me{background:linear-gradient(135deg,#111,#4a4a55)}
+.who{font-size:13.5px;font-weight:600}
+.when{font-size:12px;color:#aeaeb6}
+.tag{
+  display:inline-block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  color:#ff4f3b;background:#fff1ef;padding:4px 9px;border-radius:6px;
+  margin-bottom:9px;font-weight:600;
+}
+.post p{margin:0;font-size:15.5px;line-height:1.55;color:#22222a;white-space:pre-wrap}
+.post-foot{display:flex;gap:16px;margin-top:13px;font-size:12.5px;color:#b0b0b8}
+.post-date{
+  margin-top:13px;padding-top:13px;border-top:1px solid #f0f0f4;
+  animation:pop .45s cubic-bezier(.2,.9,.3,1.3);
+}
+.post-date span{display:block;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;
+  color:#a0a0a6;font-weight:600;margin-bottom:5px}
+.post-date b{display:block;font-size:20px;font-weight:700;letter-spacing:-.4px;color:#111;line-height:1.2}
+.post-date.none b{font-size:17px;color:#8b8b90}
+.post-date i{display:block;font-style:normal;font-size:12px;color:#a0a0a6;margin-top:4px;line-height:1.45}
+
+/* ---------- DM thread --------------------------------------------------- */
+#dm{background:#fff}
+.dmbar{
+  flex:none;display:flex;align-items:center;gap:11px;
+  padding:9px 16px;border-bottom:1px solid #ececf0;background:#fff;z-index:3;
+}
+.back{border:0;background:none;font-size:24px;line-height:1;cursor:pointer;color:#111;padding:0 4px 3px 0}
+.dmav{width:34px;height:34px;border-radius:50%;flex:none;
+  background:linear-gradient(135deg,#c9c9d4,#9a9aa8);position:relative}
+.dmav::after{
+  content:"";position:absolute;right:-1px;bottom:-1px;width:10px;height:10px;
+  border-radius:50%;background:#30d158;border:2px solid #fff;
+}
+.dmav.gone::after{background:#c7c7cc}
+.dmname{font-size:15px;font-weight:600;letter-spacing:-.1px;user-select:none}
+.dmstat{font-size:11.5px;color:#a0a0a6;height:14px}
+
+.thread{
+  flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;
+  padding:16px 14px 6px;
+  display:flex;flex-direction:column;gap:2px;
+  -webkit-overflow-scrolling:touch;
+}
+/* messages sit at the bottom of an empty thread, like a real app,
+   without breaking scrolling once the thread overflows */
+.thread::before{content:"";margin-top:auto}
+.daystamp{align-self:center;font-size:11.5px;color:#b0b0b8;margin:6px 0 14px}
+.warn{
+  align-self:center;max-width:82%;text-align:center;font-size:11.5px;color:#9a9aa2;
+  background:#f6f6f8;border-radius:10px;padding:9px 12px;margin:2px 0 14px;line-height:1.5;
+}
+.row{display:flex;max-width:100%;margin-top:2px}
+.row.them{justify-content:flex-start}
+.row.me{justify-content:flex-end;margin-top:8px}
+.row.gap{margin-top:11px}
+.bubble{
+  max-width:74%;padding:9px 14px;font-size:15.5px;line-height:1.42;
+  border-radius:20px;word-wrap:break-word;white-space:pre-wrap;
+  animation:pop .22s cubic-bezier(.2,.9,.3,1.3);
+}
+@keyframes pop{from{opacity:0;transform:translateY(7px) scale(.96)}to{opacity:1;transform:none}}
+.them .bubble{background:#f0f0f3;color:#111;border-bottom-left-radius:6px}
+.me .bubble{background:#111;color:#fff;border-bottom-right-radius:6px}
+.row.mid.them .bubble{border-bottom-left-radius:20px;border-top-left-radius:6px}
+.row.mid.me .bubble{border-bottom-right-radius:20px;border-top-right-radius:6px}
+.seen{align-self:flex-end;font-size:11px;color:#b4b4bc;margin:3px 4px 0}
+
+.typing .bubble{padding:13px 16px;display:flex;gap:4px}
+.typing span{width:7px;height:7px;border-radius:50%;background:#b6b6be;animation:blink 1.3s infinite}
+.typing span:nth-child(2){animation-delay:.18s}
+.typing span:nth-child(3){animation-delay:.36s}
+@keyframes blink{0%,60%,100%{opacity:.3;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
+
+.datecard{
+  align-self:flex-start;max-width:78%;margin:10px 0 4px;
+  background:#111;color:#fff;border-radius:20px;border-bottom-left-radius:6px;
+  padding:19px 22px;animation:pop .4s cubic-bezier(.2,.9,.3,1.3);
+}
+.datecard small{display:block;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;opacity:.5;margin-bottom:7px}
+.datecard b{display:block;font-size:24px;font-weight:600;letter-spacing:-.5px;line-height:1.15}
+.datecard i{display:block;font-style:normal;font-size:12.5px;opacity:.55;margin-top:6px}
+.datecard.nodate{background:#f0f0f3;color:#111;border:1px dashed #c8c8d0}
+.datecard.nodate small{opacity:.45}
+.datecard.nodate b{font-size:19px;letter-spacing:-.2px}
+.datecard.nodate i{opacity:.6}
+
+/* composer — always visible, never covered */
+.composer{
+  flex:none;display:flex;align-items:flex-end;gap:8px;
+  padding:9px 12px calc(11px + env(safe-area-inset-bottom,0px));
+  border-top:1px solid #ececf0;background:#fff;
+}
+.composer textarea{
+  flex:1;min-height:38px;max-height:104px;resize:none;border:1px solid #e4e4e8;
+  border-radius:20px;padding:9px 14px;font:400 15.5px/1.35 inherit;outline:0;
+  background:#fff;color:#111;
+}
+.composer textarea:focus{border-color:#c4c4cc}
+.composer textarea::placeholder{color:#b4b4bc}
+.send{
+  flex:none;width:36px;height:36px;border-radius:50%;border:0;background:#111;color:#fff;
+  font-size:17px;cursor:pointer;display:grid;place-items:center;transition:.15s;
+}
+.send:disabled{background:#dcdce2;cursor:default}
+.frozen{
+  flex:none;padding:16px 20px calc(20px + env(safe-area-inset-bottom,0px));
+  text-align:center;font-size:13px;color:#a0a0a6;border-top:1px solid #ececf0;line-height:1.5;
+}
+.frozen button{
+  margin:12px 0 0;border:1px solid #e0e0e6;background:#fff;
+  padding:9px 20px;border-radius:999px;font:500 13.5px inherit;cursor:pointer;color:#111;
+}
+
+/* ---------- push notification ------------------------------------------- */
+.push{
+  position:absolute;top:52px;left:12px;right:12px;z-index:40;
+  background:#fbfbfd;
+  border-radius:20px;padding:13px 15px;display:flex;gap:11px;align-items:center;
+  box-shadow:0 14px 40px rgba(0,0,0,.22);cursor:pointer;
+  transform:translateY(-160%);opacity:0;visibility:hidden;
+  transition:transform .5s cubic-bezier(.3,1.3,.4,1),opacity .28s,visibility 0s linear .5s;
+  border:1px solid #eceCf0;
+}
+.push.show{
+  transform:translateY(0);opacity:1;visibility:visible;
+  transition:transform .5s cubic-bezier(.3,1.3,.4,1),opacity .28s,visibility 0s;
+}
+.push .pav{width:34px;height:34px;border-radius:50%;flex:none;
+  background:linear-gradient(135deg,#c9c9d4,#9a9aa8)}
+.push .ptxt{flex:1;min-width:0}
+.push .ptop{display:flex;justify-content:space-between;font-size:12px;color:#8b8b92;margin-bottom:2px}
+.push .ptop b{color:#111;font-size:13px;font-weight:600}
+.push p{margin:0;font-size:13.5px;line-height:1.35;color:#22222a;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+/* ---------- hidden mechanism trace (for class demo only) ----------------- */
+.trace{
+  position:absolute;inset:0;z-index:60;background:rgba(10,10,14,.93);
+  backdrop-filter:blur(6px);color:#e8e8ee;padding:26px 22px;overflow-y:auto;
+  font:400 13px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;display:none;
+}
+.trace.on{display:block}
+.trace h3{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:#ff6b52;margin:0 0 4px}
+.trace p.note{color:#8b8b96;margin:0 0 18px;font-size:12px}
+.trace ol{padding-left:18px;margin:0}
+.trace li{margin-bottom:14px}
+.trace em{color:#8b8b96;font-style:normal;display:block}
+.trace b{color:#fff;font-weight:600}
+.trace .close{position:absolute;top:18px;right:20px;border:0;background:none;color:#8b8b96;font-size:22px;cursor:pointer}
+</style>
+</head>
+<body>
+
+<div class="phone">
+  <div class="statusbar">
+    <span id="clock">9:41</span>
+    <span class="right">
+      <span class="sig"><i></i><i></i><i></i><i></i></span>
+      <span style="font-size:11px">5G</span>
+      <span class="batt"></span>
+    </span>
+  </div>
+
+  <!-- ============ 1. COMPOSE ============ -->
+  <section class="screen active" id="compose">
+    <div class="logo"><span class="dot"></span> small things</div>
+    <h1>You remember it.<br>Not when.</h1>
+    <p class="sub">Post a small thing you can&rsquo;t put a date on.<br>Someone here will help you find the day.</p>
+
+    <div class="label">How did it feel?</div>
+    <div class="moods" id="moods">
+      <button class="mood" data-m="annoyed">annoyed</button>
+      <button class="mood" data-m="happy">happy</button>
+      <button class="mood" data-m="sad">sad</button>
+      <button class="mood" data-m="embarrassed">embarrassed</button>
+      <button class="mood" data-m="relieved">relieved</button>
+      <button class="mood" data-m="confused">confused</button>
+    </div>
+
+    <div class="label">What happened?</div>
+    <textarea id="story" maxlength="600"
+      placeholder="We waited for the bus that never came. I know it was cold, but I couldn&rsquo;t tell you what month..."></textarea>
+
+    <div class="compose-foot">
+      <span class="privacy">Posted anonymously.</span>
+      <button class="share" id="shareBtn" disabled>Share</button>
+    </div>
+  </section>
+
+  <!-- ============ 2. FEED ============ -->
+  <section class="screen" id="feed">
+    <div class="feedbar">
+      <b>small things</b>
+      <button class="iconbtn" id="inboxBtn" aria-label="Inbox">✉︎<span class="badge" id="badge">1</span></button>
+    </div>
+    <div class="feedscroll" id="feedscroll"></div>
+  </section>
+
+  <!-- ============ 3. DM ============ -->
+  <section class="screen" id="dm">
+    <div class="dmbar">
+      <button class="back" id="backBtn" aria-label="Back">‹</button>
+      <div class="dmav" id="dmav"></div>
+      <div style="flex:1;min-width:0">
+        <div class="dmname" id="dmname">unknown</div>
+        <div class="dmstat" id="dmstat">Active now</div>
+      </div>
+    </div>
+
+    <div class="thread" id="thread"></div>
+
+    <form class="composer" id="composer">
+      <textarea id="msg" rows="1" placeholder="Message..." maxlength="500" autocomplete="off"></textarea>
+      <button class="send" id="sendBtn" type="submit" aria-label="Send">↑</button>
+    </form>
+
+    <div class="frozen" id="frozen" hidden>
+      This account is no longer available.
+      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+        <button id="seePost">see your post</button>
+        <button id="restart">start over</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- push notification -->
+  <div class="push" id="push">
+    <div class="pav"></div>
+    <div class="ptxt">
+      <div class="ptop"><b>unknown</b><span>now</span></div>
+      <p id="pushText"></p>
+    </div>
+  </div>
+
+  <!-- hidden trace: triple-click the name "unknown" in the chat header -->
+  <div class="trace" id="trace">
+    <button class="close" id="traceClose">×</button>
+    <h3>What actually produced that date</h3>
+    <p class="note">Hidden from the participant. Triple-click the name again to close.</p>
+    <ol id="traceList"></ol>
+  </div>
+</div>
+
+<script src="engine.js"></script>
+<script>
+/* ===========================================================================
+   VERSION 2 — the surface.
+   The stranger asks the SAME questions Version 1 asks, in ordinary words.
+   Nothing is decided in advance: every answer is fed straight into the
+   shared session, and the ending is whatever the session arrives at.
+   =========================================================================== */
+
+const $ = id => document.getElementById(id);
+const wait = ms => new Promise(r => setTimeout(r, ms));
+const rnd  = (a,b) => a + Math.random()*(b-a);
+const pickRnd = a => a[Math.floor(Math.random()*a.length)];
+/* ?plain=1 — no typos, shorter pauses. for screen-recording in class. */
+const PLAIN = /[?&]plain=1/.test(location.search);
+
+function tick(){
+  const d=new Date();let h=d.getHours();const m=String(d.getMinutes()).padStart(2,"0");
+  const ap=h>=12?"PM":"AM";h=h%12||12;$("clock").textContent=`${h}:${m}`;
+  return `${h}:${m} ${ap}`;
+}
+tick(); setInterval(tick,20000);
+
+/* ---------- state ------------------------------------------------------- */
+const S = {
+  mood:null, post:"", session:null,
+  started:false, fails:0, turn:0, hostile:0, nudges:0,
+  said:new Set(), queue:[], pumping:false, idleTimer:null,
+  busy:false, done:false, lastMonths:null, lastYears:null
+};
+
+/* ---------- the stranger's voice ---------------------------------------- */
+const V = {
+  approach:[
+    "i saw your post",
+    "the part where you said you don't know when it was"
+  ],
+  offer:[
+    "i'm ok at working those out",
+    "if you want to try, i'll ask you a few things"
+  ],
+  ack:["ok","right","ok, good","that helps","that's useful actually","mm ok"],
+  ackUnknown:[
+    "that's fine",
+    "ok. we'll go around it",
+    "no, that's normal. nobody keeps that part"
+  ],
+  hedge:[
+    "i'm not guessing, i'm just removing things",
+    "most of this is ruling stuff out",
+    "you remember more than you think, it's just sideways"
+  ],
+  identity:[
+    "nobody. i just do this",
+    "not important. i'm better at this than at explaining it",
+    "someone who's read a lot of posts like yours"
+  ],
+  whyMe:[
+    "because you said you couldn't place it. that's the interesting part",
+    "people post the memory and lose the date. it's almost always recoverable"
+  ],
+  bot:["no","no. does it read like one","i type like this because it's late"],
+  proof:[
+    "i'm not proving anything. you're the one with the memory",
+    "i can't verify it. you can. that's the whole method"
+  ],
+  hostile:["ok. i'll stop","that's fair"],
+  nudge:["you still there","take your time","no rush"],
+  push:[
+    "i think i can work out when that was",
+    "you said you don't know when it was —",
+    "can i ask you a few things about that post"
+  ]
+};
+function line(pool){
+  const fresh = pool.filter(t => !S.said.has(t));
+  const t = fresh.length ? pickRnd(fresh) : pickRnd(pool);
+  S.said.add(t); return t;
+}
+
+/* ---------- rendering --------------------------------------------------- */
+const thread = $("thread");
+let lastSide = null;
+const nearBottom = () => thread.scrollHeight - thread.scrollTop - thread.clientHeight < 120;
+const toBottom = f => { if(f || nearBottom()) thread.scrollTop = thread.scrollHeight; };
+
+function addMsg(text, side){
+  const row = document.createElement("div");
+  row.className = "row " + side + (lastSide===side ? " mid" : " gap");
+  const b = document.createElement("div");
+  b.className = "bubble"; b.textContent = text;
+  row.appendChild(b);
+  const t = $("typingRow");
+  if(t) thread.insertBefore(row, t); else thread.appendChild(row);
+  lastSide = side; toBottom(side==="me");
+}
+function addSeen(){
+  document.querySelectorAll(".seen").forEach(e=>e.remove());
+  const s=document.createElement("div"); s.className="seen"; s.textContent="Seen";
+  thread.appendChild(s); toBottom(true);
+}
+function showTyping(){
+  if($("typingRow")) return;
+  const row=document.createElement("div"); row.id="typingRow"; row.className="row them typing gap";
+  const b=document.createElement("div"); b.className="bubble";
+  b.innerHTML="<span></span><span></span><span></span>";
+  row.appendChild(b); thread.appendChild(row); toBottom();
+}
+const hideTyping = () => $("typingRow")?.remove();
+const status = t => $("dmstat").textContent = t;
+const typeTime = t => PLAIN ? 380 : Math.min(2300, 400 + t.length*25 + rnd(0,300));
+
+function typo(text){
+  const words = text.split(" ");
+  const ok = words.map((w,i)=>[w,i]).filter(([w])=>/^[a-z]{5,}$/.test(w));
+  if(!ok.length) return null;
+  const [w,i] = pickRnd(ok);
+  const spots=[]; for(let p=1;p<w.length-1;p++) if(w[p]!==w[p+1]) spots.push(p);
+  if(!spots.length) return null;
+  const p = pickRnd(spots);
+  return { wrong: words.map((x,k)=>k===i?(w.slice(0,p)+w[p+1]+w[p]+w.slice(p+2)):x).join(" "),
+           fix: "*"+w };
+}
+
+async function say(text, opts={}){
+  await wait(opts.pre ?? rnd(300,650));
+  showTyping(); status("typing…");
+  if(!PLAIN && Math.random()<0.2 && text.length>25){ // starts, stops, starts again
+    await wait(rnd(450,850)); hideTyping(); status("Active now");
+    await wait(rnd(600,1100)); showTyping(); status("typing…");
+  }
+  await wait(typeTime(text));
+  hideTyping(); status("Active now");
+  if(!PLAIN && Math.random()<0.05 && text.length>20 && !opts.noTypo){
+    const t = typo(text);
+    if(t){ addMsg(t.wrong,"them"); await wait(rnd(800,1400)); addMsg(t.fix,"them"); return; }
+  }
+  addMsg(text,"them");
+}
+async function burst(lines){
+  S.busy = true;
+  for(const l of lines){ if(l) await say(l); }
+  S.busy = false; armIdle();
+}
+
+/* ---------- reading the narrowing out loud, without naming the rule ------ */
+function remark(){
+  const st = S.session.state;
+  const ms = st.months, yr = st.yearMin===st.yearMax ? st.yearMin : null;
+  const movedMonths = S.lastMonths!==null && ms.length < S.lastMonths;
+  const movedYears  = S.lastYears!==null && yr && S.lastYears!==yr;
+  S.lastMonths = ms.length; S.lastYears = yr;
+  if(!movedMonths && !movedYears) return null;
+  if(Math.random()>0.55) return null;
+  const has = set => ms.every(m=>set.includes(m));
+  if(ms.length<=2) return "ok. that's basically down to a couple of weeks either way";
+  if(has([11,0,1,2])) return "so we're somewhere in the cold part of it";
+  if(has([5,6,7,8])) return "so it's the summer";
+  if(has([8,9,10])) return "that puts it in the autumn";
+  if(has([2,3,4])) return "so, spring then";
+  if(movedYears) return `so it's ${yr}`;
+  return "ok, that moves it";
+}
+
+/* ---------- asking the current question --------------------------------- */
+async function askCurrent(shortForm){
+  const q = S.session.current();
+  if(!q) return finish();
+  S.fails = 0;
+  let lines = q.chat.slice();
+  /* they gave a day but no year — that is now the only gap */
+  if(q.id==="how_long_ago" && S.session.state.needYear)
+    lines = [pickRnd(["which year was that, though","what year, do you think"])];
+  await burst(shortForm ? [lines[lines.length-1]] : lines);
+  $("msg").focus();
+}
+
+/* ---------- meta questions the person asks the stranger ------------------ */
+function metaIntent(raw){
+  const t = raw.toLowerCase().trim();
+  if(/\b(fuck|creepy|stalker|leave me alone|stop messaging|go away)\b|滚/.test(t)) return "hostile";
+  if(/\b(are you (a )?(bot|ai|real)|is this (a )?bot|chatgpt|robot)\b/.test(t)||/你是.*机器人/.test(t)) return "bot";
+  if(/\b(who are you|who is this|who r u|do i know you|what'?s your name)\b/.test(t)||/你是谁/.test(t)) return "who";
+  if(/\b(why (are|did) you|why me|how did you find|what do you want)\b/.test(t)||/为什么/.test(t)) return "why";
+  if(/\b(prove|proof|how (do|can) you know|i don'?t believe|how does this work|are you guessing)\b/.test(t)) return "proof";
+  return null;
+}
+
+/* ---------- the turn ---------------------------------------------------- */
+async function respond(raw){
+  S.turn++;
+
+  const meta = metaIntent(raw);
+  if(meta){
+    if(meta==="hostile"){
+      S.hostile++;
+      if(S.hostile>=2){ await burst([line(V.hostile)]); return finish(true); }
+      return burst([line(V.hostile), "one more question and i'll leave it"]).then(()=>askCurrent(true));
+    }
+    const reply = { bot:V.bot, who:V.identity, why:V.whyMe, proof:V.proof }[meta];
+    await burst([line(reply), Math.random()<.5 ? line(V.hedge) : null].filter(Boolean));
+    return askCurrent(true);
+  }
+
+  /* Before anything else: did they just hand over a date, or a month, or a
+     season — whether or not that is what was asked? People do not wait for
+     the right question. A hedged date ("maybe aug 21") still counts. */
+  const pending = S.session.current();
+  const clue = DateSystem.scanTime(raw);
+  let clueApplied = false;
+
+  if(clue && !(pending && pending.kind==="date")){
+    if(clue.date){
+      S.session.offerDate(clue.date, clue.hedged);
+      const st = S.session.state;
+      const shown = new Date(st.exact.year, st.exact.month, st.exact.day)
+        .toLocaleDateString("en-US",{month:"long",day:"numeric"}).toLowerCase();
+      await burst(clue.hedged
+        ? [shown, pickRnd([
+            "ok. you don't have to be sure. that's still the closest thing we've got",
+            "that'll do. a maybe is a lot more than nothing"])]
+        : [shown, pickRnd(["ok, that's a day","right, that's what i needed"])]);
+      return next();
+    }
+    S.session.offerClue(clue);
+    clueApplied = true;
+    const named = (clue.say||[]).join(", ").toLowerCase();
+    await burst([pickRnd([
+      named ? `${named}. ok` : "ok, noted",
+      "that narrows it a lot"])]);
+  }
+
+  /* everything else goes to the shared session — this is the only place
+     the outcome is ever decided */
+  const r = S.session.answer(raw);
+
+  /* if the message already told us something, an unreadable answer is not
+     a failure — take what we got and move on */
+  if(!r.ok && clueApplied) return next();
+
+  if(!r.ok && r.reason==="unparsed"){
+    S.fails++;
+    if(S.fails>=2){
+      S.session.giveUp();
+      await burst([line(V.ackUnknown)]);
+      return next();
+    }
+    await burst([pickRnd(["sorry —","hm,"]) + " " + r.fallback]);
+    return;
+  }
+
+  /* acknowledge like a person: sometimes, briefly, and never twice over */
+  const qKind = DateSystem.Q[r.id] ? DateSystem.Q[r.id].kind : "structural";
+  const bits = [];
+  if(r.option && r.option.v==="unknown") bits.push(line(V.ackUnknown));
+  else if(qKind==="narrow"){ if(Math.random()<0.65) bits.push(pickRnd(V.ack)); }
+  else if(Math.random()<0.4) bits.push(pickRnd(["ok","right","got it"]));
+
+  if(r.contradiction) bits.push("wait — that doesn't sit with what you said before. i'll keep the earlier one");
+
+  const rm = remark();
+  if(rm){ if(bits.length && Math.random()<0.6) bits.shift(); bits.push(rm); }
+
+  await burst(bits);
+  return next();
+}
+
+async function next(){
+  if(S.session.finished) return finish();
+  await wait(rnd(200,500));
+  return askCurrent();
+}
+
+/* how a Selected Date was selected — in plain words, without naming the rule */
+function selectedFrom(res){
+  if(S.session.state.offered) return "the day you named, without being sure";
+  return res.remaining > 1
+    ? `one of ${res.remaining} days that still fit`
+    : "the only day left that fits";
+}
+
+/* ---------- the ending — whichever of the three it turns out to be ------- */
+async function finish(abrupt){
+  if(S.done) return;
+  S.done = true;
+  clearTimeout(S.idleTimer);
+  const res = S.session.result();
+  S.result = res;
+  S.busy = true;
+
+  if(!abrupt){
+    await say(pickRnd(["hold on","ok, one sec","let me line it up"]), {pre:800, noTypo:true});
+    await wait(1200);
+    showTyping(); status("typing…");
+    await wait(1700);
+    hideTyping(); status("Active now");
+    await wait(600);
+  }
+
+  const card = document.createElement("div");
+
+  if(res.output === "A"){
+    await say("i think we have the exact day.", {pre:400, noTypo:true});
+    await wait(1000);
+    card.className = "datecard";
+    card.innerHTML = `<small>Exact Date</small><b>${res.pretty}</b><i>${res.weekday}</i>`;
+    thread.appendChild(card); lastSide=null; toBottom(true);
+    await wait(1400);
+    await say(pickRnd([
+      "that one was yours. you had it the whole time",
+      "i didn't find that. you did"
+    ]), {pre:300});
+
+  } else if(res.output === "B"){
+    await say("i don't think we can know for sure, but this is the day that fits best.",
+              {pre:400, noTypo:true});
+    await wait(1000);
+    card.className = "datecard";
+    card.innerHTML = `<small>Selected Date</small><b>${res.pretty}</b>` +
+                     `<i>${res.weekday} · ${selectedFrom(res)}</i>`;
+    thread.appendChild(card); lastSide=null; toBottom(true);
+    await wait(1400);
+    await say(pickRnd([
+      "it could be a couple of weeks either side of that",
+      "don't hold me to the day. the month is solid"
+    ]), {pre:300});
+
+  } else {
+    await say("i don't think this belongs to one specific day.", {pre:400, noTypo:true});
+    await wait(1000);
+    const st = S.session.state;
+    const yearKnown = st.yearMin === st.yearMax;
+    const narrowed = st.months.length < 12 || yearKnown;
+    /* only claim a range that is actually a range */
+    const rangeText = st.months.length < 12
+      ? "closest it gets: " + res.months + (yearKnown ? " " + res.years : "")
+      : (yearKnown ? "closest it gets: sometime in " + res.years : "");
+    card.className = "datecard nodate";
+    const why = st.reason==="period-no-moment"
+      ? "it stays a period — nothing in it points at a day"
+      : "too little could be recalled to place it";
+    S.closestText = rangeText;
+    card.innerHTML = `<small>Cannot Be Represented</small><b>No single day</b>` +
+      `<i>${why}${rangeText ? " · " + rangeText : ""}</i>`;
+    thread.appendChild(card); lastSide=null; toBottom(true);
+    await wait(1400);
+    if(rangeText){
+      await say(`i can get it to around ${res.months.toLowerCase()}${yearKnown?" "+res.years:""}`, {pre:300});
+      await wait(900);
+      await say("but not to a day. it isn't shaped like one", {pre:300});
+    } else {
+      await say(pickRnd([
+        "i could give you a day. it would just be a number i made up",
+        "some of them don't convert. that's not a failure of yours"
+      ]), {pre:300});
+    }
+  }
+
+  /* the post carries the answer now */
+  if(S.postEl){
+    const stamp = document.createElement("div");
+    stamp.className = "post-date" + (res.pretty ? "" : " none");
+    const OUTCOME = { A:"Exact Date", B:"Selected Date", C:"Cannot Be Represented" };
+    stamp.innerHTML = `<span>${OUTCOME[res.output]}</span>` + (res.pretty
+      ? `<b>${res.pretty}</b><i>${res.weekday}${
+          res.output==="B" ? " · " + selectedFrom(res) : ""}</i>`
+      : `<b>No single day</b>` + (S.closestText ? `<i>${S.closestText}</i>` : ""));
+    const foot = S.postEl.querySelector(".post-foot");
+    S.postEl.insertBefore(stamp, foot);
+    S.postEl.querySelector(".post-foot").firstElementChild.textContent = "1 reply";
+  }
+
+  await wait(1600);
+  $("composer").hidden = true;
+  $("frozen").hidden = false;
+  $("dmav").classList.add("gone");
+  status("Active 4h ago");
+  const w = document.createElement("div");
+  w.className = "warn"; w.textContent = "unknown deactivated their account.";
+  thread.appendChild(w); toBottom(true);
+  S.busy = false;
+}
+
+/* ---------- idle ------------------------------------------------------- */
+function armIdle(){
+  clearTimeout(S.idleTimer);
+  if(S.done || S.nudges>=2) return;
+  S.idleTimer = setTimeout(async ()=>{
+    if(S.busy || S.done) return;
+    S.nudges++; await burst([line(V.nudge)]);
+  }, rnd(18000,25000));
+}
+
+/* ===========================================================================
+   FLOW
+   =========================================================================== */
+const OTHERS = [
+  {m:"relieved", t:"Found out the noise in my apartment was the fridge. Couldn't tell you what week that was."},
+  {m:"embarrassed", t:"Waved at someone who was waving at the person behind me. Sometime last winter? Maybe."},
+  {m:"happy", t:"A stranger held the door with their foot because their hands were full of plants."},
+  {m:"confused", t:"I keep thinking it's Thursday. It has been Thursday for three days."}
+];
+
+$("moods").addEventListener("click", e=>{
+  const b=e.target.closest(".mood"); if(!b) return;
+  document.querySelectorAll(".mood").forEach(m=>m.classList.remove("on"));
+  b.classList.add("on"); S.mood=b.dataset.m; checkReady();
+});
+$("story").addEventListener("input", checkReady);
+function checkReady(){
+  $("shareBtn").disabled = !(S.mood && $("story").value.trim().length>=8);
+}
+function go(from,to){                       /* forward: new screen slides in */
+  $(from).classList.remove("active"); $(from).classList.add("behind");
+  $(to).classList.remove("behind"); $(to).classList.add("active");
+}
+function back(from,to){                     /* back: current screen slides off right */
+  $(from).classList.remove("active","behind");
+  $(to).classList.remove("behind"); $(to).classList.add("active");
+  $("feedscroll").scrollTop = 0;
+}
+
+$("shareBtn").addEventListener("click", ()=>{
+  S.post = $("story").value.trim();
+
+  /* a session is opened, but NOTHING is decided here.
+     It holds only the full field of candidate days. */
+  S.session = DateSystem.createSession(S.post);
+
+  const fs=$("feedscroll"); fs.innerHTML="";
+  S.postEl = postEl(S.mood,S.post,"you","just now",true);
+  fs.appendChild(S.postEl);
+  OTHERS.forEach((o,i)=>fs.appendChild(postEl(o.m,o.t,"anonymous",`${(i+1)*7}m`,false)));
+  go("compose","feed");
+
+  setTimeout(()=>{
+    $("pushText").textContent = pickRnd(V.push);
+    $("push").classList.add("show");
+    $("badge").classList.add("on");
+    setTimeout(()=>$("push").classList.remove("show"), 9000);
+  }, 4200);
+});
+
+function postEl(mood,text,who,when,mine){
+  const d=document.createElement("article");
+  d.className="post"+(mine?" mine":"");
+  d.innerHTML=`<div class="post-head"><div class="av${mine?" me":""}"></div>
+    <div><div class="who">${who}</div><div class="when">${when}</div></div></div>
+    <span class="tag">${mood}</span><p></p>
+    <div class="post-foot"><span>0 replies</span><span>${mine?"anonymous":"public"}</span></div>`;
+  d.querySelector("p").textContent=text;
+  return d;
+}
+
+async function openDM(){
+  $("push").classList.remove("show");
+  $("badge").classList.remove("on");
+  go("feed","dm");
+  if(thread.children.length===0){
+    const stamp=document.createElement("div");
+    stamp.className="daystamp"; stamp.textContent="Today "+tick();
+    thread.appendChild(stamp);
+    const warn=document.createElement("div");
+    warn.className="warn";
+    warn.textContent="You don't follow each other. This person may not be who they say they are.";
+    thread.appendChild(warn);
+    await burst([...V.approach, line(V.offer)]);
+  }
+  $("msg").focus();
+}
+$("push").addEventListener("click", openDM);
+$("inboxBtn").addEventListener("click", ()=>{
+  if($("badge").classList.contains("on")||thread.children.length) openDM();
+});
+$("backBtn").addEventListener("click", ()=>back("dm","feed"));
+$("restart").addEventListener("click", ()=>location.reload());
+$("seePost").addEventListener("click", ()=>back("dm","feed"));
+
+/* ---------- composer: never disabled, so focus is never lost ------------ */
+const msg=$("msg");
+$("composer").addEventListener("submit", e=>{
+  e.preventDefault();
+  const text=msg.value.trim();
+  if(!text || S.done) return;
+  addMsg(text,"me");
+  msg.value=""; msg.style.height="auto"; msg.focus();
+  setTimeout(addSeen, rnd(500,1100));
+  S.queue.push(text);
+  pump();
+});
+async function pump(){
+  if(S.pumping) return;
+  S.pumping = true;
+  while(S.queue.length && !S.done){
+    while(S.busy) await wait(160);
+    const batch = S.queue.splice(0, S.queue.length).join(" ");
+    /* the first thing you say is just "yes, ok" to the offer —
+       it opens the questions rather than answering one */
+    if(!S.started){ S.started = true; await burst([pickRnd(["ok","right, first one","let's see"])]); await askCurrent(); }
+    else await respond(batch);
+  }
+  S.pumping = false;
+}
+msg.addEventListener("input", ()=>{
+  msg.style.height="auto";
+  msg.style.height=Math.min(msg.scrollHeight,104)+"px";
+});
+msg.addEventListener("keydown", e=>{
+  if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); $("composer").requestSubmit(); }
+});
+document.addEventListener("keydown", e=>{
+  if(!$("dm").classList.contains("active") || S.done) return;
+  if(e.metaKey||e.ctrlKey||e.altKey) return;
+  if(document.activeElement===msg) return;
+  if(e.key.length===1 || e.key==="Backspace") msg.focus();
+});
+
+/* ---------- hidden trace for class demo: triple-click "unknown" ---------- */
+$("dmname").addEventListener("click", e=>{
+  if(e.detail!==3 || !S.session) return;
+  const tr = S.session.state.trace;
+  $("traceList").innerHTML = tr.map(t=>
+    `<li><b>${t.node}</b>
+       <em>asked as: &ldquo;${t.chat}&rdquo;</em>
+       <em>they said: &ldquo;${t.raw}&rdquo; &rarr; read as: ${t.reading}</em>
+       <em>&rarr; ${t.effect}${t.contradiction?" (contradiction)":""}</em>
+       <em>days still possible: ${t.remaining}</em></li>`).join("")
+    + (S.result ? `<li><b>output ${S.result.output}: ${S.result.pretty || "no date"}</b>
+       <em>${S.result.why}</em></li>` : `<li><em>still running</em></li>`);
+  $("trace").classList.add("on");
+});
+$("traceClose").addEventListener("click", ()=>$("trace").classList.remove("on"));
+</script>
+</body>
+</html>
