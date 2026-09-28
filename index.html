@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MAKE IT A DATE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="app" id="app">
+    <!-- Full-screen calendar background -->
+    <section class="calendar-bg" id="calendarBg" aria-hidden="true">
+      <div class="calendar-chrome">
+        <div>
+          <div class="calendar-kicker">CALENDAR FIELD</div>
+          <div class="calendar-state" id="calendarState">UNRESOLVED</div>
+        </div>
+        <div class="calendar-month" id="calendarMonth">SEPTEMBER 2026</div>
+      </div>
+
+      <div class="weekdays">
+        <span>SUN</span><span>MON</span><span>TUE</span><span>WED</span><span>THU</span><span>FRI</span><span>SAT</span>
+      </div>
+
+      <div class="calendar-grid" id="calendarGrid"></div>
+      <div class="calendar-vignette"></div>
+    </section>
+
+    <!-- Header -->
+    <header class="topbar">
+      <div class="brand">MAKE IT A DATE</div>
+      <div class="date-slot">
+        <span>DATE SLOT</span>
+        <strong id="dateSlotValue">EMPTY</strong>
+      </div>
+    </header>
+
+    <!-- Center interaction -->
+    <section class="interaction-shell">
+      <div class="interaction-card" id="interactionCard">
+        <div class="step-row">
+          <span class="step-label">STEP</span>
+          <span class="step-number" id="stepNumber">01</span>
+        </div>
+
+        <h1 id="promptText"></h1>
+
+        <div class="control-area" id="controlArea"></div>
+      </div>
+    </section>
+
+    <!-- Visible trace from v3: question + answer -->
+    <aside class="trace-panel">
+      <div class="trace-title">TRACE</div>
+      <div class="trace-list" id="traceList"></div>
+    </aside>
+
+    <button id="restartButton" class="restart hidden" type="button">RESTART</button>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
